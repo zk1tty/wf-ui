@@ -9,29 +9,37 @@ const supabaseAnonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
 console.log("API", API, "\n", "supabaseUrl", supabaseUrl, "\n", "supabaseAnonKey", supabaseAnonKey);
 const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey);
 
-export async function apiFetch<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
+// Custom fetch function with auth headers
+async function authedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const { data } = await supabase.auth.getSession();
   const headers = {
     'Content-Type': 'application/json',
     ...(data.session?.access_token
       ? { Authorization: `Bearer ${data.session.access_token}` }
       : {}),
-    ...options.headers
+    ...init?.headers
   };
 
-  const res = await fetch(`${API}${path}`, { ...options, headers });
+  return fetch(input, { ...init, headers });
+}
+
+// Create OpenAPI fetch client with authenticated fetch
+export const fetchClient = createFetchClient<paths>({
+  baseUrl: API,
+  fetch: authedFetch,
+});
+
+// Create OpenAPI React Query client
+export const $api = createClient(fetchClient);
+
+// Legacy apiFetch function - consider migrating to fetchClient
+export async function apiFetch<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const res = await authedFetch(`${API}${path}`, options);
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<T>;
 }
-
-
-export const fetchClient = createFetchClient<paths>({
-  baseUrl: API,
-});
-
-export const $api = createClient(fetchClient);
 
 export default $api;
