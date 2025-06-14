@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import { SortableStep } from './SortableStep';
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 import { workflowService } from '@/services/workflowService';
+import { canEditWorkflow } from '@/utils/authUtils';
 
 type Workflow = z.infer<typeof workflowSchema>;
 type Step = z.infer<typeof stepSchema>;
@@ -33,6 +34,9 @@ type Step = z.infer<typeof stepSchema>;
 export function WorkflowEditor() {
   const {
     currentWorkflowData,
+    isCurrentWorkflowPublic,
+    currentUserJWT,
+    isCurrentUserOwner,
     updateWorkflowUI,
     setEditorStatus,
     editorStatus,
@@ -44,6 +48,13 @@ export function WorkflowEditor() {
   const [oldWorkflow, setOldWorkflow] = useState<Workflow | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Calculate permissions using auth utilities
+  const hasJWT = !!currentUserJWT;
+  const isLegacyWorkflow = workflow?.owner_id === null; // NULL owner_id = legacy workflow
+  const canEdit = canEditWorkflow(hasJWT, isCurrentUserOwner, isCurrentWorkflowPublic, isLegacyWorkflow);
+  const showLoginPrompt = !hasJWT;
+  const showForkButton = isCurrentWorkflowPublic && !isCurrentUserOwner && hasJWT;
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -113,7 +124,7 @@ export function WorkflowEditor() {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!workflow || !over || active.id === over.id) return;
+    if (!workflow || !over || active.id === over.id || !canEdit) return;
 
     const oldIndex = workflow.steps.findIndex((_, i) => i === active.id);
     const newIndex = workflow.steps.findIndex((_, i) => i === over.id);
@@ -126,6 +137,19 @@ export function WorkflowEditor() {
 
   const saveChanges = async () => {
     if (!workflow || !oldWorkflow) return;
+
+    // Check permissions using auth utilities
+    if (!canEdit) {
+      const message = !hasJWT 
+        ? 'Please login to edit workflows.'
+        : 'You do not have permission to edit this workflow.';
+      
+      toast.error(message, {
+        duration: 4000,
+        style: { fontSize: '1.25rem', padding: '16px' },
+      });
+      return;
+    }
 
     const validation = workflowSchema.safeParse(workflow);
     if (!validation.success) {
@@ -279,30 +303,93 @@ export function WorkflowEditor() {
         />
       )}
       <div className="p-6 max-w-4xl mx-auto space-y-6 pb-24">
+        {/* Authentication & Permission Banners */}
+        {showLoginPrompt && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-yellow-800 font-medium">Login Required</h3>
+                <p className="text-yellow-600 text-sm mt-1">
+                  Please login via the Chrome extension to edit workflows.
+                </p>
+              </div>
+              <Button 
+                variant="outline" 
+                className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+                onClick={() => {
+                  toast.info('Please use the Chrome extension to login and upload workflows.', {
+                    duration: 4000,
+                    style: { fontSize: '1.25rem', padding: '16px' },
+                  });
+                }}
+              >
+                Login via Extension
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {isCurrentWorkflowPublic && hasJWT && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-blue-800 font-medium">
+                  {isCurrentUserOwner ? 'Your Public Workflow' : 'Public Workflow'}
+                  {isLegacyWorkflow && ' (Legacy)'}
+                </h3>
+                <p className="text-blue-600 text-sm mt-1">
+                  {isCurrentUserOwner 
+                    ? 'This is your workflow. You can edit it or change its visibility.'
+                    : isLegacyWorkflow
+                    ? 'This is a legacy workflow. Anyone with login can edit it.'
+                    : 'This is a public workflow owned by another user. You can fork it to make changes.'
+                  }
+                </p>
+              </div>
+              {showForkButton && (
+                <Button 
+                  variant="outline" 
+                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                  onClick={() => {
+                    toast.info('Fork functionality coming in Phase 2!', {
+                      duration: 3000,
+                      style: { fontSize: '1.25rem', padding: '16px' },
+                    });
+                  }}
+                >
+                  Fork to Edit
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
         <div className="space-y-2">
           <h2 className="text-xl font-semibold mb-3">Workflow Details</h2>
           <Label>Workflow Name</Label>
           <Input
             value={workflow.name}
             onChange={(e) => updateField('name', e.target.value)}
+            disabled={!canEdit}
           />
           <Label>Description</Label>
           <Textarea
             value={workflow.description}
             onChange={(e) => updateField('description', e.target.value)}
             className="min-h-[100px] resize-y"
+            disabled={!canEdit}
           />
           <Label>Analysis</Label>
           <Textarea
             value={workflow.workflow_analysis}
             onChange={(e) => updateField('workflow_analysis', e.target.value)}
             className="min-h-[150px] resize-y"
+            disabled={!canEdit}
           />
         </div>
 
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">Steps</h2>
-          <Button onClick={addStep}>
+          <Button onClick={addStep} disabled={!canEdit}>
             <Plus className="w-4 h-4 mr-1" />
             Add Step
           </Button>
@@ -325,6 +412,7 @@ export function WorkflowEditor() {
                   index={index}
                   onDelete={deleteStep}
                   onUpdate={updateStepField}
+                  disabled={!canEdit}
                 />
               ))}
             </div>
@@ -337,13 +425,17 @@ export function WorkflowEditor() {
           <Button
             className="w-full ml-10 bg-purple-600 text-white disabled:opacity-50"
             onClick={saveChanges}
-            disabled={isSaving || editorStatus === 'saved'}
+            disabled={isSaving || editorStatus === 'saved' || !canEdit}
           >
             {isSaving ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Saving Changes...
               </>
+            ) : !hasJWT ? (
+              'Login Required to Edit'
+            ) : !canEdit ? (
+              'Read-Only (No Edit Permission)'
             ) : (
               'Confirm Changes'
             )}
