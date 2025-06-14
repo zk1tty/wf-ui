@@ -8,24 +8,50 @@ import Index from './pages/Index';
 import WorkflowLoader from './pages/WorkflowLoader';
 import ProcessingPage from './pages/ProcessingPage.tsx';
 import NotFound from './pages/NotFound';
+import ExtensionBanner from './components/ExtensionBanner';
+import { useExtensionIntegration } from './hooks/useExtensionIntegration';
+
 const queryClient = new QueryClient();
+
+// Extension Integration Wrapper Component
+const ExtensionIntegrationWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isFromExtension, context, error } = useExtensionIntegration();
+  
+  return (
+    <>
+      {(isFromExtension || context?.isExtension) && (
+        <ExtensionBanner className="m-4" />
+      )}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 m-4">
+          <p className="text-sm text-red-800">
+            Extension integration error: {error}
+          </p>
+        </div>
+      )}
+      {children}
+    </>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AppProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            {/* TODO: remove workflows/:id from routes later */}
-            <Route path="/workflows/:id" element={<WorkflowLoader />} />
-            <Route path="/wf/processing/:jobId" element={<ProcessingPage />} />
-            <Route path="/wf/:id" element={<WorkflowLoader />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <ExtensionIntegrationWrapper>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              {/* TODO: remove workflows/:id from routes later */}
+              <Route path="/workflows/:id" element={<WorkflowLoader />} />
+              <Route path="/wf/processing/:jobId" element={<ProcessingPage />} />
+              <Route path="/wf/:id" element={<WorkflowLoader />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </ExtensionIntegrationWrapper>
       </AppProvider>
     </TooltipProvider>
   </QueryClientProvider>

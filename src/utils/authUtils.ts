@@ -55,6 +55,7 @@ export const getStoredSessionToken = (): string | null => {
 
 /**
  * Check if user came from Chrome extension
+ * @deprecated Use isFromExtension from extensionUtils instead
  */
 export const isFromExtension = (): boolean => {
   try {
