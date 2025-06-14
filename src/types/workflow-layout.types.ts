@@ -49,6 +49,10 @@ export const workflowSchema = z.object({
   version: z.string(),
   steps: z.array(stepSchema),
   input_schema: z.array(inputFieldSchema),
+  owner_id: z.string().uuid().nullable().optional(), // UUID owner or NULL for legacy workflows
+  id: z.string().uuid().optional(), // Workflow ID
+  created_at: z.string().optional(), // ISO timestamp
+  updated_at: z.string().optional(), // ISO timestamp
 });
 
 /* ── Inferred TypeScript type ───────────────────────────────────────– */
