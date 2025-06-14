@@ -18,7 +18,9 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            {/* TODO: remove workflows/:id from routes later */}
             <Route path="/workflows/:id" element={<WorkflowLoader />} />
+            <Route path="/wf/:id" element={<WorkflowLoader />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
