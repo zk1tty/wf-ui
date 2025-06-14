@@ -12,6 +12,7 @@ export interface OwnershipCheckResponse {
 /**
  * Check if current user owns a workflow
  * Handles UUID-based ownership and NULL legacy workflows
+ * Uses session-based API call (no Authorization headers)
  */
 export const checkWorkflowOwnership = async (
   sessionToken: string, 
@@ -20,25 +21,19 @@ export const checkWorkflowOwnership = async (
   try {
     console.log('🔐 [Auth] Checking ownership for workflow:', workflowId);
     
-    const response = await fetch(`/api/workflows/${workflowId}/ownership`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        session_token: sessionToken,
-        workflow_id: workflowId
-      })
-    });
+    // Import sessionApiFetch dynamically to avoid circular imports
+    const { sessionApiFetch } = await import('@/lib/api');
     
-    if (!response.ok) {
-      console.error('🔐 [Auth] Ownership check failed:', response.status);
-      return false;
-    }
+    const data: OwnershipCheckResponse = await sessionApiFetch(
+      `/workflows/${workflowId}/ownership`,
+      {
+        sessionToken,
+        body: JSON.stringify({ workflow_id: workflowId }),
+        method: 'POST'
+      }
+    );
     
-    const data: OwnershipCheckResponse = await response.json();
     console.log('🔐 [Auth] Ownership check result:', data);
-    
     return data.is_owner;
   } catch (error) {
     console.error('🔐 [Auth] Error checking ownership:', error);

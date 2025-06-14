@@ -1,13 +1,18 @@
 import { workflowService } from '@/services/workflowService';
+import { getStoredSessionToken } from '@/utils/authUtils';
 
 /**
  * Upload workflow recording data and navigate to processing page
  * This function is designed to be called from the Chrome extension
+ * Uses session-based authentication when available
  */
 export async function uploadAndNavigateToProcessing(recordingData: any): Promise<string> {
   try {
-    // Upload the recording data
-    const { job_id } = await workflowService.uploadWorkflow(recordingData);
+    // Get session token for authenticated upload
+    const sessionToken = getStoredSessionToken();
+    
+    // Upload the recording data with session token if available
+    const { job_id } = await workflowService.uploadWorkflow(recordingData, sessionToken || undefined);
     
     // Navigate to the processing page
     const processingUrl = `/wf/processing/${job_id}`;
@@ -33,9 +38,13 @@ export async function uploadAndNavigateToProcessing(recordingData: any): Promise
 /**
  * Direct upload function for use in web context
  * Returns the job_id for manual navigation
+ * Uses session-based authentication when available
  */
 export async function uploadWorkflowRecording(recordingData: any): Promise<string> {
-  const { job_id } = await workflowService.uploadWorkflow(recordingData);
+  // Get session token for authenticated upload
+  const sessionToken = getStoredSessionToken();
+  
+  const { job_id } = await workflowService.uploadWorkflow(recordingData, sessionToken || undefined);
   return job_id;
 }
 

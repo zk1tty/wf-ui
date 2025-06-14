@@ -1,4 +1,4 @@
-import { fetchClient, apiFetch } from '../lib/api';
+import { fetchClient, apiFetch, sessionApiFetch } from '../lib/api';
 import {
   Workflow,
   WorkflowMetadata,
@@ -10,18 +10,21 @@ export interface WorkflowService {
   getWorkflows(): Promise<Workflow[]>;
   getWorkflowByName(name: string): Promise<any>;
   getPublicWorkflowById(id: string): Promise<any>;
-  uploadWorkflow(recordingData: any): Promise<{ job_id: string }>;
+  uploadWorkflow(recordingData: any, sessionToken?: string): Promise<{ job_id: string }>;
   getUploadStatus(jobId: string): Promise<any>;
   updateWorkflowMetadata(
     name: string,
-    metadata: WorkflowMetadata
+    metadata: WorkflowMetadata,
+    sessionToken?: string
   ): Promise<void>;
   executeWorkflow(
     name: string,
-    inputFields: z.infer<typeof inputFieldSchema>[]
+    inputFields: z.infer<typeof inputFieldSchema>[],
+    sessionToken?: string
   ): Promise<{
     task_id: string;
     log_position: number;
+    message: string;
   }>;
   getWorkflowCategory(timestamp: number): string;
   addWorkflow(name: string, content: string): Promise<void>;
@@ -137,16 +140,30 @@ class WorkflowServiceImpl implements WorkflowService {
     }
   }
 
-  async uploadWorkflow(recordingData: any): Promise<{ job_id: string }> {
+  async uploadWorkflow(recordingData: any, sessionToken?: string): Promise<{ job_id: string }> {
     try {
-      const response = await apiFetch<{ job_id: string }>('/workflows/upload', {
-        method: 'POST',
-        body: JSON.stringify(recordingData),
-        auth: false
-      });
-      
-      console.log('[workflowService] Upload response:', response);
-      return response;
+      // If session token is provided, use session-based auth
+      if (sessionToken) {
+        const { sessionApiFetch } = await import('../lib/api');
+        const response = await sessionApiFetch<{ job_id: string }>('/workflows/upload', {
+          sessionToken,
+          body: JSON.stringify(recordingData),
+          method: 'POST'
+        });
+        
+        console.log('[workflowService] Upload response (session-based):', response);
+        return response;
+      } else {
+        // Fallback to public upload (no auth)
+        const response = await apiFetch<{ job_id: string }>('/workflows/upload', {
+          method: 'POST',
+          body: JSON.stringify(recordingData),
+          auth: false
+        });
+        
+        console.log('[workflowService] Upload response (public):', response);
+        return response;
+      }
     } catch (error) {
       console.error('[workflowService] Failed to upload workflow:', error);
       throw new Error('Failed to upload workflow');
@@ -166,12 +183,35 @@ class WorkflowServiceImpl implements WorkflowService {
 
   async updateWorkflowMetadata(
     name: string,
-    metadata: WorkflowMetadata
+    metadata: WorkflowMetadata,
+    sessionToken?: string
   ): Promise<any> {
+    // Use session-based API if session token is provided
+    if (sessionToken) {
+      try {
+        const data = await sessionApiFetch<{ success: boolean; error?: string }>('/workflows/update-metadata', {
+          sessionToken,
+          body: JSON.stringify({ name, metadata: metadata as any }),
+          method: 'POST'
+        });
+        
+        console.log('Response from updateWorkflowMetadata (session-based):', data);
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to update workflow metadata');
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('Session-based updateWorkflowMetadata failed:', error);
+        throw error;
+      }
+    }
+    
+    // Fallback to JWT-based API
     const response = await fetchClient.POST('/api/workflows/update-metadata', {
       body: { name, metadata: metadata as any },
     });
-    console.log('Response from updateWorkflowMetadata:', response);
+    console.log('Response from updateWorkflowMetadata (JWT-based):', response);
     if (!response.data) {
       throw new Error('Failed to return data from server');
     }
@@ -224,7 +264,8 @@ class WorkflowServiceImpl implements WorkflowService {
 
   async executeWorkflow(
     name: string,
-    inputFields: z.infer<typeof inputFieldSchema>[]
+    inputFields: z.infer<typeof inputFieldSchema>[],
+    sessionToken?: string
   ): Promise<{
     task_id: string;
     log_position: number;
@@ -235,6 +276,28 @@ class WorkflowServiceImpl implements WorkflowService {
       inputs[field.name] = field.value;
     });
 
+    // Use session-based API if session token is provided
+    if (sessionToken) {
+      try {
+        const data = await sessionApiFetch<{
+          task_id: string;
+          log_position: number;
+          message: string;
+        }>('/workflows/execute', {
+          sessionToken,
+          body: JSON.stringify({ name, inputs }),
+          method: 'POST'
+        });
+        
+        console.log('Response from executeWorkflow (session-based):', data);
+        return data;
+      } catch (error) {
+        console.error('Session-based executeWorkflow failed:', error);
+        throw error;
+      }
+    }
+
+    // Fallback to JWT-based API
     const response = await fetchClient.POST('/api/workflows/execute', {
       body: { name, inputs },
     });

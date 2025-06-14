@@ -55,4 +55,53 @@ export async function apiFetch<T>(
   return res.json() as Promise<T>;
 }
 
+// NEW: Session-based API fetch function (replaces JWT Authorization headers)
+export async function sessionApiFetch<T>(
+  path: string,
+  init: RequestInit & { sessionToken?: string | null; requireAuth?: boolean } = {}
+): Promise<T> {
+  const headers: Record<string, string> = { 
+    'Content-Type': 'application/json', 
+    ...(init.headers as Record<string, string> || {})
+  };
+  
+  // Prepare request body with session token if provided
+  let body = init.body;
+  const { sessionToken, requireAuth = true, ...restInit } = init;
+  
+  // If session token is provided and we need auth, add it to request body
+  if (sessionToken && requireAuth) {
+    const existingBody = body ? JSON.parse(body as string) : {};
+    body = JSON.stringify({
+      ...existingBody,
+      session_token: sessionToken
+    });
+  } else if (requireAuth && !sessionToken) {
+    // Get session token from storage if not provided
+    const storedToken = sessionStorage.getItem('workflow_session_token');
+    if (storedToken) {
+      const existingBody = body ? JSON.parse(body as string) : {};
+      body = JSON.stringify({
+        ...existingBody,
+        session_token: storedToken
+      });
+    }
+  }
+  
+  const res = await fetch(`${API}${path}`, { 
+    ...restInit, 
+    headers,
+    body,
+    method: init.method || 'POST' // Default to POST for session-based requests
+  });
+  
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`🔐 [API] Session API call failed: ${res.status} - ${errorText}`);
+    throw new Error(errorText);
+  }
+  
+  return res.json() as Promise<T>;
+}
+
 export default $api;
