@@ -2,7 +2,7 @@ import React from 'react';
 import { usePublicWorkflows } from '@/hooks/usePublicWorkflows';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Globe, Clock, User, Loader2 } from 'lucide-react';
+import { Globe, Clock, User, Loader2, Palette} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export const PublicWorkflowsGallery = () => {
@@ -46,8 +46,8 @@ export const PublicWorkflowsGallery = () => {
       <div className="max-w-6xl mx-auto">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold text-gray-800 mb-4">
-            <Globe className="inline-block w-10 h-10 mr-3 text-purple-600" />
-            Workflow Gallery 🎨
+            <Palette className="inline-block w-10 h-10 mr-3 text-purple-600" />
+            Workflow Gallery
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Discover workflows created by the community.

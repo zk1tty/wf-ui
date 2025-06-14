@@ -1,4 +1,4 @@
-import { Play, Settings, Edit3, Blocks, SidebarOpen, Terminal } from 'lucide-react';
+import { Play, Settings, Edit3, Blocks, SidebarOpen, Terminal, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAppContext } from '@/contexts/AppContext';
@@ -48,6 +48,14 @@ export function TopToolbar() {
     }
   };
 
+  const handleNavigateToGallery = () => {
+    if (checkForUnsavedChanges()) {
+      return;
+    }
+    console.log('Navigating to gallery');
+    setDisplayMode('start');
+  };
+
   return (
     <div className="border-b border-gray-200 bg-white px-6 py-4">
       <div className="flex items-center justify-between">
@@ -55,6 +63,17 @@ export function TopToolbar() {
           <SidebarTrigger className="p-2">
             <SidebarOpen className="w-4 h-4" />
           </SidebarTrigger>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNavigateToGallery}
+            className="flex items-center gap-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+            title="Back to Gallery"
+          >
+            <Palette className="w-5 h-5" />
+            <span className="hidden sm:inline">Gallery</span>
+          </Button>
         </div>
 
         <div className="flex items-center gap-3">
