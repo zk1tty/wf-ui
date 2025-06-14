@@ -32,12 +32,25 @@ export const fetchClient = createFetchClient<paths>({
 // Create OpenAPI React Query client
 export const $api = createClient(fetchClient);
 
-// Legacy apiFetch function - consider migrating to fetchClient
+// Enhanced apiFetch function with optional authentication
 export async function apiFetch<T>(
   path: string,
-  options: RequestInit = {}
+  init: RequestInit & { auth?: boolean } = {}
 ): Promise<T> {
-  const res = await authedFetch(`${API}${path}`, options);
+  const headers: Record<string, string> = { 
+    'Content-Type': 'application/json', 
+    ...(init.headers as Record<string, string> || {})
+  };
+  
+  // Add auth header only if auth is not explicitly set to false (default = true)
+  if (init.auth !== false) {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) {
+      headers.Authorization = `Bearer ${data.session.access_token}`;
+    }
+  }
+  
+  const res = await fetch(`${API}${path}`, { ...init, headers });
   if (!res.ok) throw new Error(await res.text());
   return res.json() as Promise<T>;
 }
