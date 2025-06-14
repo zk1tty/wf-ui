@@ -1,4 +1,4 @@
-import { fetchClient } from '../lib/api';
+import { fetchClient, apiFetch } from '../lib/api';
 import {
   Workflow,
   WorkflowMetadata,
@@ -9,6 +9,7 @@ import { z } from 'zod';
 export interface WorkflowService {
   getWorkflows(): Promise<Workflow[]>;
   getWorkflowByName(name: string): Promise<any>;
+  getPublicWorkflowById(id: string): Promise<any>;
   updateWorkflowMetadata(
     name: string,
     metadata: WorkflowMetadata
@@ -66,6 +67,53 @@ class WorkflowServiceImpl implements WorkflowService {
     }
 
     return data;
+  }
+
+  async getPublicWorkflowById(id: string): Promise<any> {
+    try {
+      // Fetch public workflow without authentication
+      const response = await apiFetch<any>(`/workflows/${id}`, { auth: false });
+      
+      // Extract the actual workflow data from the nested structure
+      // The API returns: { json: { workflow_data }, editable: boolean, title: string }
+      const workflow = response.json || response;
+      
+      console.log('[workflowService] Public workflow response:', response);
+      console.log('[workflowService] Extracted workflow data:', workflow);
+      
+      if (!workflow) {
+        throw new Error('No workflow data found in response');
+      }
+      
+      // Normalize the workflow data to match our Zod schema expectations
+      const normalizedWorkflow = {
+        ...workflow,
+        steps: workflow.steps?.map((step: any) => ({
+          // Ensure all required fields are present with proper defaults
+          description: step.description ?? null,
+          output: step.output ?? null,
+          timestamp: step.timestamp ?? null,
+          tabId: step.tabId ?? null,
+          type: step.type,
+          // Optional fields - only include if they exist
+          ...(step.url !== undefined && { url: step.url }),
+          ...(step.cssSelector !== undefined && { cssSelector: step.cssSelector }),
+          ...(step.xpath !== undefined && { xpath: step.xpath }),
+          ...(step.elementTag !== undefined && { elementTag: step.elementTag }),
+          ...(step.elementText !== undefined && { elementText: step.elementText }),
+          ...(step.selectedText !== undefined && { selectedText: step.selectedText }),
+          ...(step.value !== undefined && { value: step.value }),
+          ...(step.task !== undefined && { task: step.task }),
+        })) || []
+      };
+      
+      console.log('[workflowService] Normalized workflow data:', normalizedWorkflow);
+      
+      return normalizedWorkflow;
+    } catch (error) {
+      console.error('[workflowService] Failed to fetch public workflow:', error);
+      throw new Error('Failed to load public workflow');
+    }
   }
 
   async updateWorkflowMetadata(
