@@ -50,7 +50,7 @@ export const PublicWorkflowsGallery = () => {
             Workflow Gallery 🎨
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Discover and explore workflows created by the community. Click on any workflow to view and use it.
+            Discover workflows created by the community.
           </p>
         </div>
 

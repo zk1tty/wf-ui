@@ -71,15 +71,34 @@ class WorkflowServiceImpl implements WorkflowService {
 
   async getPublicWorkflowById(id: string): Promise<any> {
     try {
-      // Fetch public workflow without authentication
-      const response = await apiFetch<any>(`/workflows/${id}`, { auth: false });
+      // Since there's no direct /workflows/{id} endpoint, we need to:
+      // 1. Fetch all public workflows from /workflows/
+      // 2. Find the one with matching ID
+      console.log('[workflowService] Fetching all public workflows to find ID:', id);
+      
+      const allWorkflows = await apiFetch<any[]>('/workflows/', { auth: false });
+      console.log('[workflowService] All public workflows:', allWorkflows);
+      
+      if (!Array.isArray(allWorkflows)) {
+        throw new Error('Invalid response format: expected array of workflows');
+      }
+      
+      // Find the workflow with matching ID
+      const targetWorkflow = allWorkflows.find((wf: any) => {
+        // The workflow might have the ID in different places
+        const workflowData = wf.json || wf;
+        return wf.id === id || workflowData.id === id || 
+               wf.name === id || workflowData.name === id;
+      });
+      
+      if (!targetWorkflow) {
+        throw new Error(`Workflow with ID "${id}" not found`);
+      }
+      
+      console.log('[workflowService] Found target workflow:', targetWorkflow);
       
       // Extract the actual workflow data from the nested structure
-      // The API returns: { json: { workflow_data }, editable: boolean, title: string }
-      const workflow = response.json || response;
-      
-      console.log('[workflowService] Public workflow response:', response);
-      console.log('[workflowService] Extracted workflow data:', workflow);
+      const workflow = targetWorkflow.json || targetWorkflow;
       
       if (!workflow) {
         throw new Error('No workflow data found in response');
