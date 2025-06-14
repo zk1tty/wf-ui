@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
 import { workflowService } from "@/services/workflowService";
-import { checkWorkflowOwnership, getStoredJWT, isFromExtension, isJWTLikelyExpired } from "@/utils/authUtils";
+import { checkWorkflowOwnership, getStoredSessionToken, isFromExtension, isSessionTokenValid } from "@/utils/authUtils";
 
 /** grabs /workflows/:id or /wf/:id, feeds it into context then shows the rest of the app */
 export default function WorkflowLoader() {
@@ -18,7 +18,7 @@ export default function WorkflowLoader() {
     setSidebarStatus, 
     setCurrentWorkflowData, 
     setDisplayMode,
-    setCurrentUserJWT,
+    setCurrentUserSessionToken,
     setIsCurrentUserOwner
   } = useAppContext();
 
@@ -30,22 +30,22 @@ export default function WorkflowLoader() {
       try {
         setSidebarStatus('loading');
         
-        // 🔐 Check for JWT and authentication state
-        const jwt = getStoredJWT();
+        // 🔐 Check for session token and authentication state
+        const sessionToken = getStoredSessionToken();
         const fromExt = isFromExtension();
         
         console.log('🔐 [WorkflowLoader] Auth check:', { 
-          hasJWT: !!jwt, 
+          hasSessionToken: !!sessionToken, 
           fromExtension: fromExt,
-          isExpired: jwt ? isJWTLikelyExpired(jwt) : null
+          isValid: sessionToken ? isSessionTokenValid(sessionToken) : null
         });
         
-        if (jwt && !isJWTLikelyExpired(jwt)) {
-          setCurrentUserJWT(jwt);
-          console.log('🔐 [WorkflowLoader] Valid JWT found');
-        } else if (jwt) {
-          console.warn('🔐 [WorkflowLoader] JWT appears expired');
-          setCurrentUserJWT(null);
+        if (sessionToken && isSessionTokenValid(sessionToken)) {
+          setCurrentUserSessionToken(sessionToken);
+          console.log('🔐 [WorkflowLoader] Valid session token found');
+        } else if (sessionToken) {
+          console.warn('🔐 [WorkflowLoader] Session token appears invalid');
+          setCurrentUserSessionToken(null);
         }
         
         let wf: any;
@@ -55,9 +55,9 @@ export default function WorkflowLoader() {
           console.log("📄 [WorkflowLoader] Public workflow loaded:", wf.name || wf.id, "steps:", wf.steps?.length);
           
           // Check ownership for public workflow
-          if (jwt && !isJWTLikelyExpired(jwt) && wf.id) {
+          if (sessionToken && isSessionTokenValid(sessionToken) && wf.id) {
             try {
-              const isOwner = await checkWorkflowOwnership(jwt, wf.id);
+              const isOwner = await checkWorkflowOwnership(sessionToken, wf.id);
               setIsCurrentUserOwner(isOwner);
               console.log('🔐 [WorkflowLoader] Ownership check result:', isOwner);
             } catch (error) {
@@ -77,9 +77,9 @@ export default function WorkflowLoader() {
           wf = typeof res === "string" ? JSON.parse(res) : res;
           console.log("📄 [WorkflowLoader] Private workflow loaded:", wf.name, "steps:", wf.steps?.length);
           
-          // For private workflows, assume ownership if JWT exists
+          // For private workflows, assume ownership if session token exists
           // (Private workflows are typically accessed by their owners)
-          if (jwt && !isJWTLikelyExpired(jwt)) {
+          if (sessionToken && isSessionTokenValid(sessionToken)) {
             setIsCurrentUserOwner(true);
             console.log('🔐 [WorkflowLoader] Assuming ownership for private workflow');
           } else {

@@ -49,7 +49,7 @@ interface AppContextType {
   setEditorStatus: (status: EditorStatus) => void;
   currentWorkflowData: Workflow | null;
   isCurrentWorkflowPublic: boolean;
-  currentUserJWT: string | null;
+  currentUserSessionToken: string | null;
   isCurrentUserOwner: boolean;
   workflows: Workflow[];
   addWorkflow: (workflow: Workflow) => void;
@@ -75,7 +75,7 @@ interface AppContextType {
   setWorkflows: (workflows: Workflow[]) => void;
   setSidebarStatus: (status: SidebarStatus) => void;
   setCurrentWorkflowData: (workflow: Workflow | null, isPublic?: boolean) => void;
-  setCurrentUserJWT: (jwt: string | null) => void;
+  setCurrentUserSessionToken: (sessionToken: string | null) => void;
   setIsCurrentUserOwner: (isOwner: boolean) => void;
 }
 
@@ -92,7 +92,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [currentWorkflowData, setCurrentWorkflowDataState] =
     useState<Workflow | null>(null);
   const [isCurrentWorkflowPublic, setIsCurrentWorkflowPublic] = useState<boolean>(false);
-  const [currentUserJWT, setCurrentUserJWT] = useState<string | null>(null);
+  const [currentUserSessionToken, setCurrentUserSessionToken] = useState<string | null>(null);
   const [isCurrentUserOwner, setIsCurrentUserOwner] = useState<boolean>(false);
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus>('idle');
   const [workflowError, setWorkflowError] = useState<string | null>(null);
@@ -112,6 +112,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setCurrentWorkflowDataState(workflow);
     setIsCurrentWorkflowPublic(isPublic);
   }, []);
+
+
 
   const checkForUnsavedChanges = useCallback(() => {
     if (recordingStatus === 'recording') {
@@ -352,7 +354,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         currentLogPosition: logPosition,
         currentWorkflowData,
         isCurrentWorkflowPublic,
-        currentUserJWT,
+        currentUserSessionToken,
         isCurrentUserOwner,
         workflows,
         addWorkflow,
@@ -377,7 +379,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         setWorkflows,
         setSidebarStatus,
         setCurrentWorkflowData,
-        setCurrentUserJWT,
+        setCurrentUserSessionToken,
         setIsCurrentUserOwner
       }}
     >

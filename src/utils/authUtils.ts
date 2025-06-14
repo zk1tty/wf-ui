@@ -1,5 +1,5 @@
 /**
- * Auth utilities for JWT handling and workflow ownership
+ * Auth utilities for session token handling and workflow ownership
  * Supports UUID-based ownership with NULL legacy workflows (Option B)
  */
 
@@ -14,17 +14,21 @@ export interface OwnershipCheckResponse {
  * Handles UUID-based ownership and NULL legacy workflows
  */
 export const checkWorkflowOwnership = async (
-  jwt: string, 
+  sessionToken: string, 
   workflowId: string
 ): Promise<boolean> => {
   try {
     console.log('🔐 [Auth] Checking ownership for workflow:', workflowId);
     
     const response = await fetch(`/api/workflows/${workflowId}/ownership`, {
+      method: 'POST',
       headers: { 
-        'Authorization': `Bearer ${jwt}`,
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({
+        session_token: sessionToken,
+        workflow_id: workflowId
+      })
     });
     
     if (!response.ok) {
@@ -43,13 +47,13 @@ export const checkWorkflowOwnership = async (
 };
 
 /**
- * Get stored JWT from sessionStorage
+ * Get stored session token from sessionStorage
  */
-export const getStoredJWT = (): string | null => {
+export const getStoredSessionToken = (): string | null => {
   try {
-    return sessionStorage.getItem('workflow_auth');
+    return sessionStorage.getItem('workflow_session_token');
   } catch (error) {
-    console.error('🔐 [Auth] Error getting stored JWT:', error);
+    console.error('🔐 [Auth] Error getting stored session token:', error);
     return null;
   }
 };
@@ -71,7 +75,8 @@ export const isFromExtension = (): boolean => {
  */
 export const clearStoredAuth = (): void => {
   try {
-    sessionStorage.removeItem('workflow_auth');
+    sessionStorage.removeItem('workflow_session_token');
+    sessionStorage.removeItem('workflow_auth_type');
     sessionStorage.removeItem('from_extension');
     console.log('🔐 [Auth] Cleared stored auth data');
   } catch (error) {
@@ -80,34 +85,27 @@ export const clearStoredAuth = (): void => {
 };
 
 /**
- * Check if JWT is likely expired (basic check without validation)
+ * Check if session token exists and is valid format
+ * Note: Actual validation is done by backend with Supabase
  */
-export const isJWTLikelyExpired = (jwt: string): boolean => {
+export const isSessionTokenValid = (sessionToken: string): boolean => {
   try {
-    const parts = jwt.split('.');
-    if (parts.length !== 3 || !parts[1]) return true;
-    
-    const payload = JSON.parse(atob(parts[1]));
-    const now = Math.floor(Date.now() / 1000);
-    return payload.exp && payload.exp < now;
+    // Basic format check - session tokens should be non-empty strings
+    return typeof sessionToken === 'string' && sessionToken.length > 0;
   } catch (error) {
-    console.error('🔐 [Auth] Error checking JWT expiration:', error);
-    return true; // Assume expired if we can't parse
+    console.error('🔐 [Auth] Error checking session token format:', error);
+    return false;
   }
 };
 
 /**
- * Get user ID from JWT (without validation)
+ * Get auth type from storage
  */
-export const getUserIdFromJWT = (jwt: string): string | null => {
+export const getAuthType = (): string | null => {
   try {
-    const parts = jwt.split('.');
-    if (parts.length !== 3 || !parts[1]) return null;
-    
-    const payload = JSON.parse(atob(parts[1]));
-    return payload.sub || payload.user_id || null;
+    return sessionStorage.getItem('workflow_auth_type');
   } catch (error) {
-    console.error('🔐 [Auth] Error extracting user ID from JWT:', error);
+    console.error('🔐 [Auth] Error getting auth type:', error);
     return null;
   }
 };
@@ -116,13 +114,13 @@ export const getUserIdFromJWT = (jwt: string): string | null => {
  * Determine edit permissions based on auth state and workflow ownership
  */
 export const canEditWorkflow = (
-  hasJWT: boolean,
+  hasSessionToken: boolean,
   isOwner: boolean,
   isPublicWorkflow: boolean,
   isLegacyWorkflow: boolean = false
 ): boolean => {
-  // No JWT = no editing
-  if (!hasJWT) return false;
+  // No session token = no editing
+  if (!hasSessionToken) return false;
   
   // Owner can always edit
   if (isOwner) return true;

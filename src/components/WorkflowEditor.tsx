@@ -35,7 +35,7 @@ export function WorkflowEditor() {
   const {
     currentWorkflowData,
     isCurrentWorkflowPublic,
-    currentUserJWT,
+    currentUserSessionToken,
     isCurrentUserOwner,
     updateWorkflowUI,
     setEditorStatus,
@@ -50,11 +50,11 @@ export function WorkflowEditor() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Calculate permissions using auth utilities
-  const hasJWT = !!currentUserJWT;
+  const hasSessionToken = !!currentUserSessionToken;
   const isLegacyWorkflow = workflow?.owner_id === null; // NULL owner_id = legacy workflow
-  const canEdit = canEditWorkflow(hasJWT, isCurrentUserOwner, isCurrentWorkflowPublic, isLegacyWorkflow);
-  const showLoginPrompt = !hasJWT;
-  const showForkButton = isCurrentWorkflowPublic && !isCurrentUserOwner && hasJWT;
+  const canEdit = canEditWorkflow(hasSessionToken, isCurrentUserOwner, isCurrentWorkflowPublic, isLegacyWorkflow);
+  const showLoginPrompt = !hasSessionToken;
+  const showForkButton = isCurrentWorkflowPublic && !isCurrentUserOwner && hasSessionToken;
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -140,8 +140,8 @@ export function WorkflowEditor() {
 
     // Check permissions using auth utilities
     if (!canEdit) {
-      const message = !hasJWT 
-        ? 'Please login to edit workflows.'
+      const message = !hasSessionToken 
+        ? 'Please login via Chrome extension to edit workflows.'
         : 'You do not have permission to edit this workflow.';
       
       toast.error(message, {
@@ -329,7 +329,7 @@ export function WorkflowEditor() {
           </div>
         )}
 
-        {isCurrentWorkflowPublic && hasJWT && (
+        {isCurrentWorkflowPublic && hasSessionToken && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between">
               <div>
@@ -432,7 +432,7 @@ export function WorkflowEditor() {
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Saving Changes...
               </>
-            ) : !hasJWT ? (
+            ) : !hasSessionToken ? (
               'Login Required to Edit'
             ) : !canEdit ? (
               'Read-Only (No Edit Permission)'
