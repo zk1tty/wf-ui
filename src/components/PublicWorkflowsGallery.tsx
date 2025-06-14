@@ -47,7 +47,7 @@ export const PublicWorkflowsGallery = () => {
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold text-gray-800 mb-4">
             <Globe className="inline-block w-10 h-10 mr-3 text-purple-600" />
-            Public Workflows
+            Workflow Gallery 🎨
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Discover and explore workflows created by the community. Click on any workflow to view and use it.
