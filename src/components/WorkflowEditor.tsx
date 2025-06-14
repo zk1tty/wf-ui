@@ -49,10 +49,10 @@ export function WorkflowEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Calculate permissions using auth utilities
-  const hasSessionToken = !!currentUserSessionToken;
+  // Calculate permissions using simplified auth utilities
   const isLegacyWorkflow = workflow?.owner_id === null; // NULL owner_id = legacy workflow
-  const canEdit = canEditWorkflow(hasSessionToken, isCurrentUserOwner, isCurrentWorkflowPublic, isLegacyWorkflow);
+  const canEdit = canEditWorkflow(currentUserSessionToken, isCurrentUserOwner, isCurrentWorkflowPublic, isLegacyWorkflow);
+  const hasSessionToken = !!currentUserSessionToken;
   const showLoginPrompt = !hasSessionToken;
   const showForkButton = isCurrentWorkflowPublic && !isCurrentUserOwner && hasSessionToken;
 
@@ -138,11 +138,11 @@ export function WorkflowEditor() {
   const saveChanges = async () => {
     if (!workflow || !oldWorkflow) return;
 
-    // Check permissions using auth utilities
+    // Check permissions using simplified auth utilities
     if (!canEdit) {
       const message = !hasSessionToken 
-        ? 'Please login via Chrome extension to edit workflows.'
-        : 'You do not have permission to edit this workflow.';
+        ? 'Please login through the Chrome extension to edit workflows.'
+        : 'You do not have permission to edit this workflow. Try forking it to your collection.';
       
       toast.error(message, {
         duration: 4000,
@@ -308,22 +308,22 @@ export function WorkflowEditor() {
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-yellow-800 font-medium">Login Required</h3>
+                <h3 className="text-yellow-800 font-medium">Chrome Extension Login Required</h3>
                 <p className="text-yellow-600 text-sm mt-1">
-                  Please login via the Chrome extension to edit workflows.
+                  To edit workflows, please login through the Chrome extension and upload/access workflows from there.
                 </p>
               </div>
               <Button 
                 variant="outline" 
                 className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
-                onClick={() => {
-                  toast.info('Please use the Chrome extension to login and upload workflows.', {
-                    duration: 4000,
-                    style: { fontSize: '1.25rem', padding: '16px' },
-                  });
-                }}
-              >
-                Login via Extension
+                                  onClick={() => {
+                    toast.info('Install and use our Chrome extension to login and manage workflows.', {
+                      duration: 4000,
+                      style: { fontSize: '1.25rem', padding: '16px' },
+                    });
+                  }}
+                >
+                  Get Chrome Extension
               </Button>
             </div>
           </div>

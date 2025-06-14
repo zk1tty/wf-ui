@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAppContext } from "@/contexts/AppContext";
 import { workflowService } from "@/services/workflowService";
-import { checkWorkflowOwnership, getStoredSessionToken, isFromExtension, isSessionTokenValid } from "@/utils/authUtils";
+import { checkWorkflowOwnership, getStoredSessionToken, isFromExtension, hasValidSessionToken } from "@/utils/authUtils";
 
 /** grabs /workflows/:id or /wf/:id, feeds it into context then shows the rest of the app */
 export default function WorkflowLoader() {
@@ -37,15 +37,15 @@ export default function WorkflowLoader() {
         console.log('🔐 [WorkflowLoader] Auth check:', { 
           hasSessionToken: !!sessionToken, 
           fromExtension: fromExt,
-          isValid: sessionToken ? isSessionTokenValid(sessionToken) : null
+          isValid: hasValidSessionToken(sessionToken)
         });
         
-        if (sessionToken && isSessionTokenValid(sessionToken)) {
+        if (hasValidSessionToken(sessionToken)) {
           setCurrentUserSessionToken(sessionToken);
           console.log('🔐 [WorkflowLoader] Valid session token found');
-        } else if (sessionToken) {
-          console.warn('🔐 [WorkflowLoader] Session token appears invalid');
+        } else {
           setCurrentUserSessionToken(null);
+          console.log('🔐 [WorkflowLoader] No valid session token found');
         }
         
         let wf: any;
@@ -55,9 +55,9 @@ export default function WorkflowLoader() {
           console.log("📄 [WorkflowLoader] Public workflow loaded:", wf.name || wf.id, "steps:", wf.steps?.length);
           
           // Check ownership for public workflow
-          if (sessionToken && isSessionTokenValid(sessionToken) && wf.id) {
+          if (hasValidSessionToken(sessionToken) && wf.id) {
             try {
-              const isOwner = await checkWorkflowOwnership(sessionToken, wf.id);
+              const isOwner = await checkWorkflowOwnership(sessionToken!, wf.id);
               setIsCurrentUserOwner(isOwner);
               console.log('🔐 [WorkflowLoader] Ownership check result:', isOwner);
             } catch (error) {
@@ -79,7 +79,7 @@ export default function WorkflowLoader() {
           
           // For private workflows, assume ownership if session token exists
           // (Private workflows are typically accessed by their owners)
-          if (sessionToken && isSessionTokenValid(sessionToken)) {
+          if (hasValidSessionToken(sessionToken)) {
             setIsCurrentUserOwner(true);
             console.log('🔐 [WorkflowLoader] Assuming ownership for private workflow');
           } else {

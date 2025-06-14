@@ -71,6 +71,19 @@ export const isFromExtension = (): boolean => {
 };
 
 /**
+ * Initialize session from Chrome extension (simplified)
+ * This replaces complex JWT handling with simple session token storage
+ */
+export const initializeSessionFromExtension = (sessionToken: string): void => {
+  try {
+    storeSessionToken(sessionToken);
+    console.log('🔐 [Auth] Session initialized from Chrome extension');
+  } catch (error) {
+    console.error('🔐 [Auth] Error initializing session from extension:', error);
+  }
+};
+
+/**
  * Clear stored auth data
  */
 export const clearStoredAuth = (): void => {
@@ -85,16 +98,25 @@ export const clearStoredAuth = (): void => {
 };
 
 /**
- * Check if session token exists and is valid format
- * Note: Actual validation is done by backend with Supabase
+ * Check if session token exists (simplified - no client-side validation)
+ * Note: All validation is done by backend with Supabase
  */
-export const isSessionTokenValid = (sessionToken: string): boolean => {
+export const hasValidSessionToken = (sessionToken: string | null): boolean => {
+  // Simple existence check - backend will validate with Supabase
+  return typeof sessionToken === 'string' && sessionToken.trim().length > 0;
+};
+
+/**
+ * Store session token and mark auth type
+ */
+export const storeSessionToken = (sessionToken: string): void => {
   try {
-    // Basic format check - session tokens should be non-empty strings
-    return typeof sessionToken === 'string' && sessionToken.length > 0;
+    sessionStorage.setItem('workflow_session_token', sessionToken);
+    sessionStorage.setItem('workflow_auth_type', 'session');
+    sessionStorage.setItem('from_extension', 'true');
+    console.log('🔐 [Auth] Session token stored successfully');
   } catch (error) {
-    console.error('🔐 [Auth] Error checking session token format:', error);
-    return false;
+    console.error('🔐 [Auth] Error storing session token:', error);
   }
 };
 
@@ -111,24 +133,24 @@ export const getAuthType = (): string | null => {
 };
 
 /**
- * Determine edit permissions based on auth state and workflow ownership
+ * Determine edit permissions (simplified logic)
  */
 export const canEditWorkflow = (
-  hasSessionToken: boolean,
+  sessionToken: string | null,
   isOwner: boolean,
   isPublicWorkflow: boolean,
   isLegacyWorkflow: boolean = false
 ): boolean => {
   // No session token = no editing
-  if (!hasSessionToken) return false;
+  if (!hasValidSessionToken(sessionToken)) return false;
   
-  // Owner can always edit
+  // Owner can always edit their workflows
   if (isOwner) return true;
   
   // Legacy workflows (owner_id = NULL) can be edited by any authenticated user
   if (isLegacyWorkflow) return true;
   
-  // Public workflows owned by others = read-only
+  // Public workflows owned by others = read-only (fork required)
   if (isPublicWorkflow && !isOwner) return false;
   
   // Private workflows = owner only
