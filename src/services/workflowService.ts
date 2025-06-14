@@ -10,6 +10,8 @@ export interface WorkflowService {
   getWorkflows(): Promise<Workflow[]>;
   getWorkflowByName(name: string): Promise<any>;
   getPublicWorkflowById(id: string): Promise<any>;
+  uploadWorkflow(recordingData: any): Promise<{ job_id: string }>;
+  getUploadStatus(jobId: string): Promise<any>;
   updateWorkflowMetadata(
     name: string,
     metadata: WorkflowMetadata
@@ -132,6 +134,33 @@ class WorkflowServiceImpl implements WorkflowService {
     } catch (error) {
       console.error('[workflowService] Failed to fetch public workflow:', error);
       throw new Error('Failed to load public workflow');
+    }
+  }
+
+  async uploadWorkflow(recordingData: any): Promise<{ job_id: string }> {
+    try {
+      const response = await apiFetch<{ job_id: string }>('/workflows/upload', {
+        method: 'POST',
+        body: JSON.stringify(recordingData),
+        auth: false
+      });
+      
+      console.log('[workflowService] Upload response:', response);
+      return response;
+    } catch (error) {
+      console.error('[workflowService] Failed to upload workflow:', error);
+      throw new Error('Failed to upload workflow');
+    }
+  }
+
+  async getUploadStatus(jobId: string): Promise<any> {
+    try {
+      const status = await apiFetch<any>(`/workflows/upload/${jobId}/status`, { auth: false });
+      console.log('[workflowService] Upload status:', status);
+      return status;
+    } catch (error) {
+      console.error('[workflowService] Failed to get upload status:', error);
+      throw new Error('Failed to get upload status');
     }
   }
 

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
 import Index from './pages/Index';
 import WorkflowLoader from './pages/WorkflowLoader';
+import ProcessingPage from './pages/ProcessingPage.tsx';
 import NotFound from './pages/NotFound';
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             {/* TODO: remove workflows/:id from routes later */}
             <Route path="/workflows/:id" element={<WorkflowLoader />} />
+            <Route path="/wf/processing/:jobId" element={<ProcessingPage />} />
             <Route path="/wf/:id" element={<WorkflowLoader />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
