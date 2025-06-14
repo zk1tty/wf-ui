@@ -27,6 +27,7 @@ interface SortableStepProps {
   index: number;
   onDelete: (index: number) => void;
   onUpdate: (index: number, key: keyof Step, value: unknown) => void;
+  disabled?: boolean;
 }
 
 export function SortableStep({
@@ -34,6 +35,7 @@ export function SortableStep({
   index,
   onDelete,
   onUpdate,
+  disabled = false,
 }: SortableStepProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const {
@@ -64,9 +66,9 @@ export function SortableStep({
         <CardTitle className="flex justify-between items-center">
           <span className="flex gap-2 items-center">
             <GripVertical
-              className="w-4 h-4 text-gray-400 cursor-grab"
-              {...attributes}
-              {...listeners}
+              className={`w-4 h-4 ${disabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 cursor-grab'}`}
+              {...(disabled ? {} : attributes)}
+              {...(disabled ? {} : listeners)}
             />
             Step {index + 1}
           </span>
@@ -75,6 +77,7 @@ export function SortableStep({
             size="sm"
             onClick={() => onDelete(index)}
             className="text-red-600 hover:text-red-700"
+            disabled={disabled}
           >
             <Trash2 className="w-4 h-4" />
           </Button>
@@ -87,6 +90,7 @@ export function SortableStep({
             <Select
               value={step.type}
               onValueChange={(val) => onUpdate(index, 'type', val)}
+              disabled={disabled}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -106,6 +110,7 @@ export function SortableStep({
             <Input
               value={step.description ?? ''}
               onChange={(e) => onUpdate(index, 'description', e.target.value)}
+              disabled={disabled}
             />
           </div>
         </div>
@@ -137,6 +142,7 @@ export function SortableStep({
                     onChange={(e) =>
                       onUpdate(index, key as keyof Step, e.target.value)
                     }
+                    disabled={disabled}
                   />
                 </div>
               );

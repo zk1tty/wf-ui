@@ -48,6 +48,9 @@ interface AppContextType {
   editorStatus: EditorStatus;
   setEditorStatus: (status: EditorStatus) => void;
   currentWorkflowData: Workflow | null;
+  isCurrentWorkflowPublic: boolean;
+  currentUserJWT: string | null;
+  isCurrentUserOwner: boolean;
   workflows: Workflow[];
   addWorkflow: (workflow: Workflow) => void;
   deleteWorkflow: (workflowId: string) => void;
@@ -71,7 +74,9 @@ interface AppContextType {
   fetchWorkflows: () => Promise<void>;
   setWorkflows: (workflows: Workflow[]) => void;
   setSidebarStatus: (status: SidebarStatus) => void;
-  setCurrentWorkflowData: (workflow: Workflow | null) => void;
+  setCurrentWorkflowData: (workflow: Workflow | null, isPublic?: boolean) => void;
+  setCurrentUserJWT: (jwt: string | null) => void;
+  setIsCurrentUserOwner: (isOwner: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -84,8 +89,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const { toast } = useToast();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [displayMode, setDisplay] = useState<DisplayMode>('start');
-  const [currentWorkflowData, setCurrentWorkflowData] =
+  const [currentWorkflowData, setCurrentWorkflowDataState] =
     useState<Workflow | null>(null);
+  const [isCurrentWorkflowPublic, setIsCurrentWorkflowPublic] = useState<boolean>(false);
+  const [currentUserJWT, setCurrentUserJWT] = useState<string | null>(null);
+  const [isCurrentUserOwner, setIsCurrentUserOwner] = useState<boolean>(false);
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus>('idle');
   const [workflowError, setWorkflowError] = useState<string | null>(null);
   const [activeDialog, setActiveDialog] = useState<DialogType>(null);
@@ -98,6 +106,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [recordingStatus, setRecordingStatus] =
     useState<RecordingStatus>('idle');
   const [recordingData, setRecordingData] = useState<any>(null);
+
+  // Wrapper function to handle both workflow data and public flag
+  const setCurrentWorkflowData = useCallback((workflow: Workflow | null, isPublic: boolean = false) => {
+    setCurrentWorkflowDataState(workflow);
+    setIsCurrentWorkflowPublic(isPublic);
+  }, []);
 
   const checkForUnsavedChanges = useCallback(() => {
     if (recordingStatus === 'recording') {
@@ -132,9 +146,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const wf = workflows.find((w) => w.name === workflowName);
       console.log("[selectWf] wf:", wf);
       if (wf) {
-        setCurrentWorkflowData(wf);
+        setCurrentWorkflowData(wf, false); // Private workflows are not public
       } else {
-        setCurrentWorkflowData(null); // fallback
+        setCurrentWorkflowData(null, false); // fallback
       }
     },
     [workflows, checkForUnsavedChanges]
@@ -181,10 +195,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         prev.map((wf) => (wf.name === oldWorkflow.name ? newWorkflow : wf))
       );
       if (currentWorkflowData?.name === oldWorkflow.name) {
-        setCurrentWorkflowData(newWorkflow);
+        setCurrentWorkflowData(newWorkflow, isCurrentWorkflowPublic);
       }
     },
-    [currentWorkflowData]
+    [currentWorkflowData, isCurrentWorkflowPublic, setCurrentWorkflowData]
   );
 
   const stopPollingLogs = useCallback(() => {
@@ -337,6 +351,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         currentTaskId,
         currentLogPosition: logPosition,
         currentWorkflowData,
+        isCurrentWorkflowPublic,
+        currentUserJWT,
+        isCurrentUserOwner,
         workflows,
         addWorkflow,
         deleteWorkflow,
@@ -359,7 +376,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         fetchWorkflows,
         setWorkflows,
         setSidebarStatus,
-        setCurrentWorkflowData
+        setCurrentWorkflowData,
+        setCurrentUserJWT,
+        setIsCurrentUserOwner
       }}
     >
       {children}
