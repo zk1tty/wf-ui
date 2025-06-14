@@ -312,7 +312,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       setSidebarStatus('loading');
       const response = await workflowService.getWorkflows();
-      console.log("[fetchWorkflows] response:", response);
       const parsedWorkflows = response.map((wf: any) => JSON.parse(wf));
       console.log("[fetchWorkflows] parsedWorkflows:", parsedWorkflows);
       setWorkflows(parsedWorkflows);
