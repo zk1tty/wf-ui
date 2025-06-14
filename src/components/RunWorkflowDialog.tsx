@@ -10,7 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/contexts/AppContext';
-import { Play, Loader2 } from 'lucide-react';
+import { Play, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { hasValidSessionToken } from '@/utils/authUtils';
+import SessionStatus from '@/components/SessionStatus';
 
 interface WorkflowInput {
   id: string;
@@ -27,10 +29,15 @@ export function RunWorkflowDialog() {
     setActiveDialog,
     currentWorkflowData,
     workflowStatus,
+    currentUserSessionToken,
+    isCurrentWorkflowPublic
   } = useAppContext();
   const [inputs, setInputs] = useState<WorkflowInput[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  
+  const hasSessionToken = hasValidSessionToken(currentUserSessionToken);
+  const canExecute = hasSessionToken || isCurrentWorkflowPublic; // Can execute if authenticated OR if it's a public workflow
 
   useEffect(() => {
     if (currentWorkflowData && activeDialog === 'run') {
@@ -72,6 +79,11 @@ export function RunWorkflowDialog() {
 
   const execute = async () => {
     if (!validateInputs()) return;
+    
+    if (!canExecute) {
+      setValidationError('Authentication required to execute workflows. Please login through the Chrome extension.');
+      return;
+    }
 
     setIsExecuting(true);
     setValidationError(null);
@@ -116,6 +128,21 @@ export function RunWorkflowDialog() {
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Session Status for Execution */}
+          <SessionStatus compact={true} className="mb-4" />
+          
+          {!canExecute && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <span className="text-yellow-800 font-medium">Authentication Required</span>
+              </div>
+              <p className="text-yellow-700 text-sm mt-1">
+                Please login through the Chrome extension to execute workflows.
+              </p>
+            </div>
+          )}
+          
           <p className="text-gray-600">
             Configure the input values for this workflow execution:
           </p>
@@ -168,13 +195,18 @@ export function RunWorkflowDialog() {
           </Button>
           <Button
             onClick={execute}
-            disabled={isExecuting || workflowStatus === 'running'}
-            className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+            disabled={isExecuting || workflowStatus === 'running' || !canExecute}
+            className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2 disabled:opacity-50"
           >
             {isExecuting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Executing...
+              </>
+            ) : !canExecute ? (
+              <>
+                <AlertTriangle className="w-4 h-4" />
+                Login Required
               </>
             ) : (
               <>

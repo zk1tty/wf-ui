@@ -17,6 +17,7 @@ import { workflowService } from '@/services/workflowService';
 import { useToast } from '@/hooks/use-toast';
 import { EditRecordingDialog } from './EditRecordingDialog';
 import { RecordingInProgressDialog } from './RecordingInProgressDialog';
+import SessionStatus from '@/components/SessionStatus';
 
 type Category = 'today' | 'yesterday' | 'last-week' | 'last-month' | 'older';
 
@@ -246,6 +247,9 @@ export function WorkflowSidebar() {
               <p className="text-sm text-gray-500">Canvas</p>
             </div>
           </div>
+
+          {/* Session Status in Sidebar */}
+          <SessionStatus compact={true} className="mt-3" />
 
           <div className="mt-4 relative">
             <Input

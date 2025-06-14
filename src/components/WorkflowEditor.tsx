@@ -27,6 +27,8 @@ import { SortableStep } from './SortableStep';
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 import { workflowService } from '@/services/workflowService';
 import { canEditWorkflow } from '@/utils/authUtils';
+import AuthBanner from '@/components/AuthBanner';
+import SessionStatus from '@/components/SessionStatus';
 
 type Workflow = z.infer<typeof workflowSchema>;
 type Step = z.infer<typeof stepSchema>;
@@ -289,6 +291,20 @@ export function WorkflowEditor() {
     setActiveDialog(null);
   };
 
+  const handleGetExtension = () => {
+    toast.info('Install our Chrome extension to login and manage workflows.', {
+      duration: 4000,
+      style: { fontSize: '1.25rem', padding: '16px' },
+    });
+  };
+
+  const handleForkWorkflow = () => {
+    toast.info('Fork functionality coming in Phase 2!', {
+      duration: 3000,
+      style: { fontSize: '1.25rem', padding: '16px' },
+    });
+  };
+
   if (!workflow)
     return <div className="p-8 text-gray-500">No workflow loaded</div>;
 
@@ -303,66 +319,18 @@ export function WorkflowEditor() {
         />
       )}
       <div className="p-6 max-w-4xl mx-auto space-y-6 pb-24">
-        {/* Authentication & Permission Banners */}
-        {showLoginPrompt && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-yellow-800 font-medium">Chrome Extension Login Required</h3>
-                <p className="text-yellow-600 text-sm mt-1">
-                  To edit workflows, please login through the Chrome extension and upload/access workflows from there.
-                </p>
-              </div>
-              <Button 
-                variant="outline" 
-                className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
-                                  onClick={() => {
-                    toast.info('Install and use our Chrome extension to login and manage workflows.', {
-                      duration: 4000,
-                      style: { fontSize: '1.25rem', padding: '16px' },
-                    });
-                  }}
-                >
-                  Get Chrome Extension
-              </Button>
-            </div>
-          </div>
-        )}
+        {/* Session Status */}
+        <SessionStatus 
+          showDetails={true} 
+          className="mb-4" 
+        />
 
-        {isCurrentWorkflowPublic && hasSessionToken && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-blue-800 font-medium">
-                  {isCurrentUserOwner ? 'Your Public Workflow' : 'Public Workflow'}
-                  {isLegacyWorkflow && ' (Legacy)'}
-                </h3>
-                <p className="text-blue-600 text-sm mt-1">
-                  {isCurrentUserOwner 
-                    ? 'This is your workflow. You can edit it or change its visibility.'
-                    : isLegacyWorkflow
-                    ? 'This is a legacy workflow. Anyone with login can edit it.'
-                    : 'This is a public workflow owned by another user. You can fork it to make changes.'
-                  }
-                </p>
-              </div>
-              {showForkButton && (
-                <Button 
-                  variant="outline" 
-                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                  onClick={() => {
-                    toast.info('Fork functionality coming in Phase 2!', {
-                      duration: 3000,
-                      style: { fontSize: '1.25rem', padding: '16px' },
-                    });
-                  }}
-                >
-                  Fork to Edit
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
+        {/* Enhanced Authentication & Permission Banner */}
+        <AuthBanner 
+          className="mb-6"
+          onGetExtension={handleGetExtension}
+          onForkWorkflow={handleForkWorkflow}
+        />
         <div className="space-y-2">
           <h2 className="text-xl font-semibold mb-3">Workflow Details</h2>
           <Label>Workflow Name</Label>

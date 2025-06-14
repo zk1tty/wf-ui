@@ -294,7 +294,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setWorkflowStatus('idle');
 
       try {
-        const result = await workflowService.executeWorkflow(name, inputFields);
+        // Use session token if available for execution
+        const result = await workflowService.executeWorkflow(
+          name, 
+          inputFields, 
+          currentUserSessionToken || undefined
+        );
         setCurrentTaskId(result.task_id);
         setLogPosition(result.log_position);
         setWorkflowStatus('running');
@@ -310,7 +315,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         stopPollingLogs();
       }
     },
-    [startPollingLogs, stopPollingLogs, setDisplayMode]
+    [startPollingLogs, stopPollingLogs, setDisplayMode, currentUserSessionToken]
   );
 
   // Uncomment for debugging
