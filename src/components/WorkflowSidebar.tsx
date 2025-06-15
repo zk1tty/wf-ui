@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Globe, Search, Plus, Loader, Workflow } from 'lucide-react';
+import { Globe, Search, Plus, Loader, Workflow, HelpCircle, MessageCircle, ExternalLink } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -21,12 +21,20 @@ import { useToast } from '@/hooks/use-toast';
 import { EditRecordingDialog } from './EditRecordingDialog';
 import { RecordingInProgressDialog } from './RecordingInProgressDialog';
 import SessionStatus from '@/components/SessionStatus';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 type Category = 'today' | 'yesterday' | 'last-week' | 'last-month' | 'older';
 
 export function WorkflowSidebar() {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteWorkflowId, setDeleteWorkflowId] = useState<string | null>(null);
+  const [showHelpDialog, setShowHelpDialog] = useState(false);
   const { toast } = useToast();
   const { theme } = useTheme();
   const { state } = useSidebar();
@@ -177,6 +185,15 @@ export function WorkflowSidebar() {
     setActiveDialog(null);
   };
 
+  const handleTelegramClick = () => {
+    window.open('https://t.me/n0rixpunks', '_blank');
+    setShowHelpDialog(false);
+    toast({
+      title: 'Opening Telegram',
+      description: 'Redirecting to Telegram chat...',
+    });
+  };
+
   const renderSidebarContent = () => {
     if (sidebarStatus === 'loading') {
       return (
@@ -318,8 +335,8 @@ export function WorkflowSidebar() {
           </div>
         </SidebarHeader>
 
-        <SidebarContent>
-          <SidebarGroup>
+        <SidebarContent className="flex flex-col">
+          <SidebarGroup className="flex-1">
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
                 {state !== 'collapsed' ? (
@@ -357,6 +374,28 @@ export function WorkflowSidebar() {
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+
+          {/* Help Button at Bottom */}
+          <div className={`p-4 border-t ${
+            theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+          }`}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowHelpDialog(true)}
+              className={`${
+                state === 'collapsed' ? 'w-10 h-10 p-0 mx-auto' : 'w-full'
+              } ${
+                theme === 'dark' 
+                  ? 'text-gray-400 hover:text-cyan-300 hover:bg-gray-800' 
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+              }`}
+              title={state === 'collapsed' ? 'Get Help' : ''}
+            >
+              <HelpCircle className={`${state === 'collapsed' ? 'w-5 h-5' : 'w-4 h-4'} ${state !== 'collapsed' ? 'mr-2' : ''}`} />
+              {state !== 'collapsed' && 'Help?'}
+            </Button>
+          </div>
         </SidebarContent>
       </Sidebar>
 
@@ -384,6 +423,43 @@ export function WorkflowSidebar() {
           recordingStatus={recordingStatus}
         />
       )}
+
+      {/* Help Dialog */}
+      <Dialog open={showHelpDialog} onOpenChange={setShowHelpDialog}>
+        <DialogContent className={`sm:max-w-md ${
+          theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white'
+        }`}>
+          <DialogHeader>
+            <DialogTitle className={`flex items-center gap-2 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>
+              <HelpCircle className="w-5 h-5" />
+              Need Help?
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+              
+              <Button
+                onClick={handleTelegramClick}
+                className={`w-full ${
+                  theme === 'dark' 
+                    ? 'bg-cyan-600 hover:bg-cyan-700' 
+                    : 'bg-blue-600 hover:bg-blue-700'
+                } text-white`}
+              >
+                Open Telegram
+                <MessageCircle className="w-5 h-5 mr-2" />
+              </Button>
+
+            <div className={`text-center text-xs ${
+              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+            }`}>
+              <p>@n0rixpunks</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
