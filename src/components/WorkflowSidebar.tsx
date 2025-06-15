@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Globe, Search, Plus, Loader } from 'lucide-react';
+import { Globe, Search, Plus, Loader, Workflow } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -7,12 +7,15 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
+  SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { DeleteWorkflowDialog } from '@/components/DeleteWorkflowDialog';
 import { WorkflowCategoryBlock } from '@/components/WorkflowCategoryBlock';
 import { useAppContext } from '@/contexts/AppContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { workflowService } from '@/services/workflowService';
 import { useToast } from '@/hooks/use-toast';
 import { EditRecordingDialog } from './EditRecordingDialog';
@@ -25,6 +28,8 @@ export function WorkflowSidebar() {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteWorkflowId, setDeleteWorkflowId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { theme } = useTheme();
+  const { state } = useSidebar();
   const {
     workflows,
     deleteWorkflow,
@@ -234,57 +239,121 @@ export function WorkflowSidebar() {
 
   return (
     <>
-      <Sidebar className="w-[25%] border-r border-gray-200">
-        <SidebarHeader className="border-b border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg">
-              <Globe className="w-6 h-6 text-white" />
+      <Sidebar collapsible="icon" className={`${
+        theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
+      } border-r`}>
+        <SidebarHeader className={`${
+          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+        } border-b p-4`}>
+          <div className={`flex items-center ${state === 'collapsed' ? 'justify-center' : 'gap-3'}`}>
+            <div className={`flex items-center justify-center bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg ${
+              state === 'collapsed' ? 'w-10 h-10' : 'w-10 h-10'
+            }`}>
+              <Globe className={`text-white ${state === 'collapsed' ? 'w-4 h-4' : 'w-6 h-6'}`} />
             </div>
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">
-                Rebrowse
-              </h1>
-              <p className="text-sm text-gray-500">Canvas</p>
-            </div>
-          </div>
-
-          {/* Session Status in Sidebar */}
-          <SessionStatus compact={true} className="mt-3" />
-
-          <div className="mt-4 relative">
-            <Input
-              placeholder="Search workflows..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8"
-            />
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-          </div>
-
-          <Button
-            onClick={handleRecordNewWorkflow}
-            disabled={recordingStatus === 'recording'}
-            className="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            {recordingStatus === 'recording' ? (
-              <>
-                <Loader className="w-4 h-4 mr-2 animate-spin" />
-                Recording...
-              </>
-            ) : (
-              <>
-                <Plus className="w-4 h-4 mr-2" />
-                Record New Workflow
-              </>
+            {state !== 'collapsed' && (
+              <div>
+                <h1 className={`text-lg font-semibold ${
+                  theme === 'dark' ? 'text-cyan-300 drop-shadow' : 'text-gray-900'
+                }`}>
+                  Rebrowse
+                </h1>
+                <p className={`text-sm ${
+                  theme === 'dark' ? 'text-cyan-200' : 'text-gray-500'
+                }`}>Canvas</p>
+              </div>
             )}
-          </Button>
+          </div>
+
+          {/* Session Status in Sidebar - hide when collapsed */}
+          {state !== 'collapsed' && (
+            <SessionStatus compact={true} className="mt-3" />
+          )}
+
+          {/* Search input - hide when collapsed */}
+          {state !== 'collapsed' && (
+            <div className="mt-4 relative">
+              <Input
+                placeholder="Search workflows..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={`w-full pl-8 ${
+                  theme === 'dark' 
+                    ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400' 
+                    : ''
+                }`}
+              />
+              <Search className={`absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`} />
+            </div>
+          )}
+
+          {/* Record button - show icon only when collapsed */}
+          <div className={`mt-4 ${state === 'collapsed' ? 'flex justify-center' : ''}`}>
+            <Button
+              onClick={handleRecordNewWorkflow}
+              disabled={recordingStatus === 'recording'}
+              className={`text-white ${
+                state === 'collapsed' ? 'w-10 h-10 p-0 rounded-lg' : 'w-full'
+              } ${
+                theme === 'dark' 
+                  ? 'bg-cyan-600 hover:bg-cyan-700' 
+                  : 'bg-purple-600 hover:bg-purple-700'
+              }`}
+              title={state === 'collapsed' ? 'Record New Workflow' : ''}
+            >
+              {recordingStatus === 'recording' ? (
+                <>
+                  <Loader className={`${state === 'collapsed' ? 'w-5 h-5' : 'w-4 h-4'} ${state !== 'collapsed' ? 'mr-2' : ''} animate-spin`} />
+                  {state !== 'collapsed' && 'Recording...'}
+                </>
+              ) : (
+                <>
+                  <Plus className={`${state === 'collapsed' ? 'w-5 h-5' : 'w-4 h-4'} ${state !== 'collapsed' ? 'mr-2' : ''}`} />
+                  {state !== 'collapsed' && 'Record New Workflow'}
+                </>
+              )}
+            </Button>
+          </div>
         </SidebarHeader>
 
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
-                {renderSidebarContent()}
+                {state !== 'collapsed' ? (
+                  renderSidebarContent()
+                ) : (
+                  // Show minimal workflow icons when collapsed
+                  <div className="flex flex-col items-center space-y-3 pt-4">
+                    {workflows.slice(0, 3).map((workflow, index) => (
+                      <div
+                        key={workflow.name}
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center cursor-pointer ${
+                          theme === 'dark' 
+                            ? 'bg-gray-800 hover:bg-gray-700' 
+                            : 'bg-gray-100 hover:bg-gray-200'
+                        }`}
+                        title={workflow.name}
+                        onClick={() => {
+                          // Handle workflow selection if needed
+                        }}
+                      >
+                        <Workflow className={`w-5 h-5 ${
+                          theme === 'dark' ? 'text-cyan-400' : 'text-purple-600'
+                        }`} />
+                      </div>
+                    ))}
+                    {workflows.length > 3 && (
+                      <div className={`text-xs ${
+                        theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                        +{workflows.length - 3}
+                      </div>
+                    )}
+                  </div>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

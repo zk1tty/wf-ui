@@ -9,6 +9,7 @@ import {
   FileSearch,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface WorkflowStepNodeData {
   description: string;
@@ -49,14 +50,20 @@ const actionColors = {
 
 export const WorkflowStepNode = memo(
   ({ data, selected }: WorkflowStepNodeProps) => {
+    const { theme } = useTheme();
     const Icon = actionIcons[data.action] || Info; // Fallback to Info icon if action not found
     const colorClass = actionColors[data.action] || 'bg-gray-500'; // Fallback to gray if color not found
 
     return (
       <div
         className={cn(
-          'bg-white rounded-lg border-2 shadow-sm p-4 w-[380px] h-[100px] transition-all',
-          selected ? 'border-purple-500 shadow-md' : 'border-gray-200',
+          'rounded-lg border-2 shadow-sm p-4 w-[380px] h-[100px] transition-all',
+          theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white text-gray-900',
+          selected 
+            ? 'border-purple-500 shadow-md' 
+            : theme === 'dark' 
+              ? 'border-gray-600' 
+              : 'border-gray-200',
           'hover:shadow-md'
         )}
       >
@@ -64,7 +71,12 @@ export const WorkflowStepNode = memo(
           <Handle
             type="target"
             position={Position.Top}
-            className="w-3 h-3 bg-gray-400 border-2 border-white"
+            className={cn(
+              "w-3 h-3 border-2",
+              theme === 'dark' 
+                ? "bg-gray-400 border-gray-800" 
+                : "bg-gray-400 border-white"
+            )}
           />
         )}
 
@@ -76,16 +88,29 @@ export const WorkflowStepNode = memo(
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               {data.stepNumber > 0 && (
-                <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                <span className={cn(
+                  "text-xs font-medium px-2 py-1 rounded-full",
+                  theme === 'dark'
+                    ? "text-gray-300 bg-gray-700"
+                    : "text-gray-500 bg-gray-100"
+                )}>
                   Step {data.stepNumber}
                 </span>
               )}
-              <span className="text-xs font-medium bg-purple-100 text-purple-700 px-2 py-1 rounded-full capitalize">
+              <span className={cn(
+                "text-xs font-medium px-2 py-1 rounded-full capitalize",
+                theme === 'dark'
+                  ? "bg-purple-800 text-purple-200"
+                  : "bg-purple-100 text-purple-700"
+              )}>
                 {data.action}
               </span>
             </div>
 
-            <h3 className="font-medium text-gray-900 text-sm mb-2 break-words line-clamp-2">
+            <h3 className={cn(
+              "font-medium text-sm mb-2 break-words line-clamp-2",
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            )}>
               {data.description || 'No description provided for this step'}
             </h3>
           </div>
@@ -95,7 +120,12 @@ export const WorkflowStepNode = memo(
           <Handle
             type="source"
             position={Position.Bottom}
-            className="w-3 h-3 bg-gray-400 border-2 border-white"
+            className={cn(
+              "w-3 h-3 border-2",
+              theme === 'dark' 
+                ? "bg-gray-400 border-gray-800" 
+                : "bg-gray-400 border-white"
+            )}
           />
         )}
       </div>

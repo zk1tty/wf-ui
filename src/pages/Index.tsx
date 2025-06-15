@@ -17,12 +17,10 @@ const Index2 = () => {
   const toggleLogViewer = () => setShowLogViewer((prev) => !prev);
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full bg-gray-50">
         {/* Sidebar */}
-        <div className="w-1/4 max-w-sm bg-white border-r border-gray-200">
-          <WorkflowSidebar />
-        </div>
+        <WorkflowSidebar />
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
