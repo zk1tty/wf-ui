@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle2, XCircle, Brain, ArrowLeft } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import '@/styles/brainAnimation.css';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface JobStatus {
   status: 'pending' | 'processing' | 'completed' | 'failed';
@@ -19,6 +20,7 @@ interface JobStatus {
 export default function ProcessingPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const [jobStatus, setJobStatus] = useState<JobStatus>({ status: 'pending' });
   const [isPolling, setIsPolling] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,13 +98,19 @@ export default function ProcessingPage() {
   const getStatusIcon = () => {
     switch (jobStatus.status) {
       case 'completed':
-        return <CheckCircle2 className="w-8 h-8 text-green-500" />;
+        return <CheckCircle2 className={`w-8 h-8 ${
+          theme === 'dark' ? 'text-green-400' : 'text-green-500'
+        }`} />;
       case 'failed':
-        return <XCircle className="w-8 h-8 text-red-500" />;
+        return <XCircle className={`w-8 h-8 ${
+          theme === 'dark' ? 'text-red-400' : 'text-red-500'
+        }`} />;
       case 'processing':
       case 'pending':
       default:
-        return <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />;
+        return <Loader2 className={`w-8 h-8 animate-spin ${
+          theme === 'dark' ? 'text-cyan-400' : 'text-blue-500'
+        }`} />;
     }
   };
 
@@ -130,11 +138,19 @@ export default function ProcessingPage() {
   // Show error state if no jobId
   if (!jobId) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <div className={`min-h-screen flex items-center justify-center p-4 ${
+        theme === 'dark' ? 'bg-black' : 'bg-gray-50'
+      }`}>
+        <Card className={`w-full max-w-md ${
+          theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white'
+        }`}>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl text-red-600">Error</CardTitle>
-            <CardDescription>No job ID provided</CardDescription>
+            <CardTitle className={`text-2xl ${
+              theme === 'dark' ? 'text-red-400' : 'text-red-600'
+            }`}>Error</CardTitle>
+            <CardDescription className={
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            }>No job ID provided</CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={handleBackToGallery} className="w-full">
@@ -150,18 +166,32 @@ export default function ProcessingPage() {
   // Show loading state initially
   if (isLoading && jobStatus.status === 'pending' && !error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+      <div className={`min-h-screen flex items-center justify-center p-4 ${
+        theme === 'dark' ? 'bg-black' : 'bg-gray-50'
+      }`}>
+        <Card className={`w-full max-w-md ${
+          theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white'
+        }`}>
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <Brain className="w-20 h-20 brain-animation" />
+              <Brain className={`w-20 h-20 brain-animation ${
+                theme === 'dark' ? 'text-cyan-400' : 'text-purple-600'
+              }`} />
             </div>
-            <CardTitle className="text-2xl">Loading</CardTitle>
-            <CardDescription>Connecting to processing service...</CardDescription>
+            <CardTitle className={`text-2xl ${
+              theme === 'dark' ? 'text-white' : 'text-black'
+            }`}>Loading</CardTitle>
+            <CardDescription className={
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            }>Connecting to processing service...</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-4" />
-            <p className="text-sm text-gray-600">Job ID: {jobId}</p>
+            <Loader2 className={`w-8 h-8 animate-spin mx-auto mb-4 ${
+              theme === 'dark' ? 'text-cyan-400' : 'text-blue-500'
+            }`} />
+            <p className={`text-sm ${
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            }`}>Job ID: {jobId}</p>
           </CardContent>
         </Card>
       </div>
@@ -169,13 +199,21 @@ export default function ProcessingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className={`min-h-screen flex items-center justify-center p-4 ${
+      theme === 'dark' ? 'bg-black' : 'bg-gray-50'
+    }`}>
+      <Card className={`w-full max-w-md ${
+        theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white'
+      }`}>
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <Brain className="w-20 h-20 brain-animation" />
+            <Brain className={`w-20 h-20 brain-animation ${
+              theme === 'dark' ? 'text-cyan-400' : 'text-purple-600'
+            }`} />
           </div>
-          <CardTitle className="text-2xl">Processing</CardTitle>
+          <CardTitle className={`text-2xl ${
+            theme === 'dark' ? 'text-white' : 'text-black'
+          }`}>Processing</CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-6">
@@ -184,7 +222,9 @@ export default function ProcessingPage() {
             <div className="flex justify-center">
               {getStatusIcon()}
             </div>
-            <p className="text-sm text-gray-600">
+            <p className={`text-sm ${
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            }`}>
               {getStatusMessage()}
             </p>
           </div>
@@ -196,7 +236,9 @@ export default function ProcessingPage() {
                 value={jobStatus.progress || 0} 
                 className="w-full"
               />
-              <div className="flex justify-between text-xs text-gray-500">
+              <div className={`flex justify-between text-xs ${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>
                 <span>{jobStatus.progress || 0}% complete</span>
                 {jobStatus.estimated_remaining_seconds && (
                   <span>~{formatTime(jobStatus.estimated_remaining_seconds)} remaining</span>
@@ -207,17 +249,25 @@ export default function ProcessingPage() {
 
           {/* Job ID */}
           <div className="text-center">
-            <p className="text-xs text-gray-400">
+            <p className={`text-xs ${
+              theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+            }`}>
               Job ID: {jobId}
             </p>
           </div>
 
           {/* Debug Info (remove in production) */}
-          <div className="text-center bg-gray-100 p-2 rounded text-xs">
+          <div className={`text-center p-2 rounded text-xs ${
+            theme === 'dark' 
+              ? 'bg-gray-800 text-gray-300' 
+              : 'bg-gray-100 text-gray-700'
+          }`}>
             <p>Debug: Status = {jobStatus.status}</p>
             <p>Debug: Polling = {isPolling ? 'Yes' : 'No'}</p>
             <p>Debug: Loading = {isLoading ? 'Yes' : 'No'}</p>
-            {error && <p className="text-red-600">Error: {error}</p>}
+            {error && <p className={
+              theme === 'dark' ? 'text-red-400' : 'text-red-600'
+            }>Error: {error}</p>}
           </div>
 
           {/* Action Buttons */}
