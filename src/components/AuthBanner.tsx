@@ -20,6 +20,7 @@ import {
   getAuthType 
 } from '@/utils/authUtils';
 import { detectExtensionContext } from '@/utils/extensionUtils';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface AuthBannerProps {
   className?: string;
@@ -38,6 +39,7 @@ export const AuthBanner: React.FC<AuthBannerProps> = ({
     isCurrentWorkflowPublic,
     currentWorkflowData
   } = useAppContext();
+  const { theme } = useTheme();
 
   const hasSessionToken = hasValidSessionToken(currentUserSessionToken);
   const authType = getAuthType();
@@ -86,37 +88,59 @@ export const AuthBanner: React.FC<AuthBannerProps> = ({
   // Authenticated but viewing public workflow
   if (hasSessionToken && isCurrentWorkflowPublic) {
     return (
-      <Alert className={`border-blue-200 bg-blue-50 ${className}`}>
-        <Info className="h-4 w-4 text-blue-600" />
+      <Alert className={`${
+        theme === 'dark' 
+          ? 'border-cyan-400 bg-gray-800' 
+          : 'border-blue-200 bg-blue-50'
+      } ${className}`}>
+        <Info className={`h-4 w-4 ${
+          theme === 'dark' ? 'text-cyan-400' : 'text-blue-600'
+        }`} />
         <AlertDescription className="flex items-center justify-between">
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-1">
-              <span className="font-medium text-blue-800">
+              <span className={`font-medium ${
+                theme === 'dark' ? 'text-cyan-300' : 'text-blue-800'
+              }`}>
                 {isCurrentUserOwner ? 'Your Public Workflow' : 'Public Workflow'}
               </span>
               
               {isCurrentUserOwner && (
-                <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                <Badge variant="secondary" className={`${
+                  theme === 'dark' 
+                    ? 'bg-cyan-800 text-cyan-200' 
+                    : 'bg-blue-100 text-blue-700'
+                }`}>
                   <Crown className="h-3 w-3 mr-1" />
                   Owner
                 </Badge>
               )}
               
               {isLegacyWorkflow && (
-                <Badge variant="outline" className="border-orange-300 text-orange-700">
+                <Badge variant="outline" className={`${
+                  theme === 'dark'
+                    ? 'border-orange-400 text-orange-300'
+                    : 'border-orange-300 text-orange-700'
+                }`}>
                   Legacy
                 </Badge>
               )}
               
               {fromExtension && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                <Badge variant="outline" className={`${
+                  theme === 'dark'
+                    ? 'bg-gray-700 text-cyan-300 border-cyan-400'
+                    : 'bg-blue-50 text-blue-700 border-blue-200'
+                }`}>
                   <Chrome className="h-3 w-3 mr-1" />
                   Extension
                 </Badge>
               )}
             </div>
             
-            <p className="text-blue-700 text-sm">
+            <p className={`text-sm ${
+              theme === 'dark' ? 'text-cyan-200' : 'text-blue-700'
+            }`}>
               {isCurrentUserOwner 
                 ? 'This is your public workflow. You can edit it or change its visibility.'
                 : isLegacyWorkflow

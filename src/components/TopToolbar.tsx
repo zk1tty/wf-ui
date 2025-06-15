@@ -1,11 +1,13 @@
-import { Play, Settings, Edit3, Blocks, SidebarOpen, Terminal, Palette, LogIn } from 'lucide-react';
+import { Play, Settings, Edit3, Blocks, SidebarOpen, Terminal, Palette, LogIn, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAppContext } from '@/contexts/AppContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useEffect, useState } from 'react';
 import { hasValidSessionToken, canEditWorkflow } from '@/utils/authUtils';
 import SessionLoginModal from '@/components/SessionLoginModal';
 import SessionStatus from '@/components/SessionStatus';
+import { CompactExtensionIndicator } from '@/components/ExtensionBanner';
 
 export function TopToolbar() {
   const {
@@ -20,6 +22,7 @@ export function TopToolbar() {
     isCurrentWorkflowPublic
   } = useAppContext();
   
+  const { theme, toggleTheme } = useTheme();
   const [showLoginModal, setShowLoginModal] = useState(false);
   
   const hasSessionToken = hasValidSessionToken(currentUserSessionToken);
@@ -31,6 +34,19 @@ export function TopToolbar() {
     isLegacyWorkflow
   );
   const canExecute = hasSessionToken || isCurrentWorkflowPublic;
+
+  // 🔍 Debug logging for authentication state
+  console.log('🔍 [TopToolbar] Auth Debug:', {
+    currentUserSessionToken: currentUserSessionToken ? `${currentUserSessionToken.slice(0,8)}...` : null,
+    hasSessionToken,
+    isCurrentUserOwner,
+    isCurrentWorkflowPublic,
+    isLegacyWorkflow,
+    canEdit,
+    canExecute,
+    workflowName: currentWorkflowData?.name,
+    workflowOwnerId: currentWorkflowData?.owner_id
+  });
 
   // Debug log to see if currentWorkflowData is updating
   console.log("TopToolbar: currentWorkflowData:", currentWorkflowData?.name || "null");
@@ -88,10 +104,18 @@ export function TopToolbar() {
 
   return (
     <>
-      <div className="border-b border-gray-200 bg-white px-6 py-4">
+      <div className={`border-b px-6 py-4 ${
+        theme === 'dark' 
+          ? 'bg-black border-gray-700' 
+          : 'bg-background border-border'
+      }`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <SidebarTrigger className="p-2">
+            <SidebarTrigger className={`p-2 hover:bg-gray-100 rounded-md ${
+              theme === 'dark' 
+                ? 'text-cyan-300 hover:bg-gray-800 hover:text-cyan-200' 
+                : 'text-gray-600 hover:text-gray-800'
+            }`}>
               <SidebarOpen className="w-4 h-4" />
             </SidebarTrigger>
             
@@ -99,7 +123,11 @@ export function TopToolbar() {
               variant="outline"
               size="sm"
               onClick={handleNavigateToGallery}
-              className="flex items-center gap-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+              className={`flex items-center gap-2 ${
+                theme === 'dark' 
+                  ? 'text-cyan-400 hover:text-cyan-300 hover:bg-gray-800 border-gray-600' 
+                  : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50'
+              }`}
               title="Back to Gallery"
             >
               <Palette className="w-5 h-5" />
@@ -111,6 +139,24 @@ export function TopToolbar() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Chrome Extension Indicator */}
+            <CompactExtensionIndicator />
+            
+            {/* Dark Mode Toggle */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleTheme}
+              className="flex items-center gap-2"
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            >
+              {theme === 'light' ? (
+                <Moon className="w-4 h-4" />
+              ) : (
+                <Sun className="w-4 h-4" />
+              )}
+            </Button>
+            
             {!hasSessionToken && (
               <Button
                 variant="outline"
@@ -128,13 +174,18 @@ export function TopToolbar() {
               size="lg"
               onClick={handleRunWithInputs}
               disabled={!currentWorkflowData || workflowStatus === 'running' || !canExecute}
-              className="flex items-center gap-2 text-base px-6 py-3 disabled:opacity-50"
+              className={`flex items-center gap-2 text-base px-6 py-3 disabled:opacity-50 ${
+                theme === 'dark' 
+                  ? 'text-white border-gray-600 hover:bg-gray-800' 
+                  : 'text-white'
+              }`}
               title={!canExecute ? 'Login required to execute workflows' : ''}
             >
               <Play className="w-5 h-5" />
               {!canExecute ? 'Login to Run' : 'Run with Inputs'}
             </Button>
 
+            {/* tempolary disabled
             <Button
               variant="outline"
               size="lg"
@@ -145,14 +196,14 @@ export function TopToolbar() {
             >
               <Settings className="w-5 h-5" />
               {!canExecute ? 'Login to Run' : 'Run as Tool'}
-            </Button>
+            </Button> */}
 
             <Button
               variant="default"
               size="lg"
               onClick={handleToggleMode}
               disabled={!currentWorkflowData || (displayMode === 'canvas' && !canEdit)}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-base px-6 py-3 disabled:opacity-50"
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-base px-6 py-3 disabled:opacity-50"
               title={displayMode === 'canvas' && !canEdit ? 'Login required to edit workflows' : ''}
             >
               {displayMode === 'editor' 
@@ -162,7 +213,7 @@ export function TopToolbar() {
                   </>
                 : <>
                     <Edit3 className="w-5 h-5" />
-                    {!canEdit ? 'Login to Edit' : 'Edit'}
+                    Edit
                   </>}
             </Button>
           </div>
