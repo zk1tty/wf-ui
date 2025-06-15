@@ -67,12 +67,21 @@ export function WorkflowEditor() {
 
   useEffect(() => {
     if (currentWorkflowData) {
+      console.log('🔍 [WorkflowEditor] currentWorkflowData:', currentWorkflowData);
+      console.log('🔍 [WorkflowEditor] currentWorkflowData.name:', currentWorkflowData.name);
+      console.log('🔍 [WorkflowEditor] currentWorkflowData.id:', currentWorkflowData.id);
+      console.log('🔍 [WorkflowEditor] currentWorkflowData keys:', Object.keys(currentWorkflowData));
+      
       const safeWorkflow = workflowSchema.safeParse(currentWorkflowData);
       if (safeWorkflow.success) {
+        console.log('🔍 [WorkflowEditor] safeWorkflow.data.name:', safeWorkflow.data.name);
         setWorkflow(safeWorkflow.data);
         setOldWorkflow(safeWorkflow.data);
         setEditorStatus('saved');
-      } else console.error('Invalid workflow data', safeWorkflow.error);
+      } else {
+        console.error('Invalid workflow data', safeWorkflow.error);
+        console.error('🔍 [WorkflowEditor] Failed to parse workflow:', currentWorkflowData);
+      }
     }
   }, [currentWorkflowData, setEditorStatus]);
 
@@ -140,6 +149,12 @@ export function WorkflowEditor() {
   const saveChanges = async () => {
     if (!workflow || !oldWorkflow) return;
 
+    console.log('🔍 [WorkflowEditor] saveChanges called');
+    console.log('🔍 [WorkflowEditor] oldWorkflow:', oldWorkflow);
+    console.log('🔍 [WorkflowEditor] oldWorkflow.name:', oldWorkflow.name);
+    console.log('🔍 [WorkflowEditor] workflow:', workflow);
+    console.log('🔍 [WorkflowEditor] workflow.name:', workflow.name);
+
     // Check permissions using simplified auth utilities
     if (!canEdit) {
       const message = !hasSessionToken 
@@ -169,83 +184,23 @@ export function WorkflowEditor() {
 
     try {
       const newWorkflow = validation.data;
-      const updateResponses: any[] = [];
-      const deleteResponses: any[] = [];
+      
+      // QUICK FIX: Get workflow ID from oldWorkflow or currentWorkflowData
+      const workflowId = oldWorkflow.id || currentWorkflowData?.id;
+      if (!workflowId) {
+        throw new Error('Workflow ID not available. Cannot save changes to this workflow.');
+      }
 
-      // Step updates (shared indices)
-      const sharedLength = Math.min(
-        oldWorkflow.steps.length,
-        newWorkflow.steps.length
+      console.log('🔍 [WorkflowEditor] Using workflow ID for save:', workflowId);
+
+      // QUICK FIX: Single full workflow update instead of individual step operations
+      const updateResponse = await workflowService.updateWorkflow(
+        workflowId, 
+        newWorkflow, 
+        currentUserSessionToken || undefined
       );
 
-      for (let i = 0; i < sharedLength; i++) {
-        const oldStep = oldWorkflow.steps[i];
-        const newStep = newWorkflow.steps[i];
-
-        if (JSON.stringify(oldStep) !== JSON.stringify(newStep)) {
-          const res = await workflowService.updateWorkflow(
-            oldWorkflow.name,
-            i,
-            newStep
-          );
-          updateResponses.push(res);
-        }
-      }
-
-      // Step additions
-      for (let i = sharedLength; i < newWorkflow.steps.length; i++) {
-        const newStep = newWorkflow.steps[i];
-        const res = await workflowService.updateWorkflow(
-          oldWorkflow.name,
-          i,
-          newStep
-        );
-        updateResponses.push(res);
-      }
-
-      // Step deletions (from end down to new length)
-      for (
-        let i = oldWorkflow.steps.length - 1;
-        i >= newWorkflow.steps.length;
-        i--
-      ) {
-        const res = await workflowService.deleteStep(oldWorkflow.name, i);
-        deleteResponses.push(res);
-      }
-
-      // Handle metadata update if needed
-      const shouldUpdateMetadata =
-        oldWorkflow.name !== newWorkflow.name ||
-        oldWorkflow.description !== newWorkflow.description ||
-        oldWorkflow.version !== newWorkflow.version ||
-        oldWorkflow.workflow_analysis !== newWorkflow.workflow_analysis ||
-        JSON.stringify(oldWorkflow.input_schema) !==
-          JSON.stringify(newWorkflow.input_schema);
-
-      const metadataResponse = shouldUpdateMetadata
-        ? await workflowService.updateWorkflowMetadata(oldWorkflow.name, {
-            name: newWorkflow.name,
-            description: newWorkflow.description,
-            version: newWorkflow.version,
-            input_schema: newWorkflow.input_schema,
-            workflow_analysis: newWorkflow.workflow_analysis,
-          })
-        : { success: true };
-
-      // Collect errors
-      const allErrors = [
-        ...updateResponses
-          .filter((r) => !r.success)
-          .map((r) => r.error || 'Step update failed'),
-        ...deleteResponses
-          .filter((r) => !r.success)
-          .map((r) => r.error || 'Step delete failed'),
-        ...(metadataResponse.success
-          ? []
-          : [metadataResponse.error || 'Metadata update failed']),
-      ];
-
-      if (allErrors.length === 0) {
+      if (updateResponse.success) {
         // Update UI state
         updateWorkflowUI(oldWorkflow, newWorkflow);
         setOldWorkflow(newWorkflow);
@@ -256,9 +211,9 @@ export function WorkflowEditor() {
           style: { fontSize: '1.25rem', padding: '16px' },
         });
       } else {
-        const errorMessage = allErrors.join('\n');
+        const errorMessage = updateResponse.error || 'Failed to save workflow';
         setSaveError(errorMessage);
-        toast.error(saveError, {
+        toast.error(errorMessage, {
           duration: 4000,
           style: { fontSize: '1.25rem', padding: '16px' },
         });
