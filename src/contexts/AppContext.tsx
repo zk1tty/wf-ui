@@ -58,7 +58,7 @@ interface AppContextType {
   activeDialog: DialogType;
   setActiveDialog: (dialog: DialogType) => void;
   executeWorkflow: (
-    name: string,
+    workflowId: string,
     inputFields: z.infer<typeof inputFieldSchema>[]
   ) => Promise<void>;
   updateWorkflowUI: (oldWorkflow: Workflow, newWorkflow: Workflow) => void;
@@ -274,8 +274,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const executeWorkflow = useCallback(
-    async (name: string, inputFields: z.infer<typeof inputFieldSchema>[]) => {
-      if (!name) return;
+    async (workflowId: string, inputFields: z.infer<typeof inputFieldSchema>[]) => {
+      if (!workflowId) return;
       const missingInputs = inputFields.filter(
         (field) => field.required && !field.value
       );
@@ -296,7 +296,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       try {
         // Use session token if available for execution
         const result = await workflowService.executeWorkflow(
-          name, 
+          workflowId, 
           inputFields, 
           currentUserSessionToken || undefined
         );
