@@ -13,6 +13,7 @@ import { Workflow } from '@/types/workflow-layout.types';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from './ui/use-toast';
 import { Clock, ListChecks, Activity, Loader2 } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface WorkflowRecordResponse {
   success: boolean;
@@ -78,6 +79,7 @@ export function EditRecordingDialog({
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const { recordingStatus, setRecordingStatus, fetchWorkflows } =
     useAppContext();
+  const { theme } = useTheme();
 
   // Update editedData when recordingData changes
   useEffect(() => {
@@ -193,7 +195,9 @@ export function EditRecordingDialog({
       >
         <DialogContent className="sm:max-w-7xl max-h-[90vh] p-10">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">
+            <DialogTitle className={`text-2xl font-bold ${
+              theme === 'dark' ? 'text-white' : 'text-black'
+            }`}>
               Edit Recorded Workflow
             </DialogTitle>
           </DialogHeader>
@@ -202,20 +206,28 @@ export function EditRecordingDialog({
             <div className="flex flex-col gap-4 h-full overflow-y-auto flex-1 min-h-0">
               <div className="grid gap-4 p-4">
                 <div className="grid gap-2">
-                  <h3 className="text-lg font-semibold">Workflow Name</h3>
+                  <h3 className={`text-lg font-semibold ${
+                    theme === 'dark' ? 'text-white' : 'text-black'
+                  }`}>Workflow Name</h3>
                   <input
                     id="name"
                     value={editedData.name}
                     onChange={(e) =>
                       setEditedData({ ...editedData, name: e.target.value })
                     }
-                    className="border rounded-md p-5 text-lg"
+                    className={`border rounded-md p-5 text-lg ${
+                      theme === 'dark' 
+                        ? 'bg-gray-900 border-gray-600 text-white placeholder-gray-400' 
+                        : 'bg-white border-gray-300 text-black'
+                    }`}
                     placeholder="Leave empty for automatic name generation"
                   />
                 </div>
 
                 <div className="grid gap-2">
-                  <h3 className="text-lg font-semibold">
+                  <h3 className={`text-lg font-semibold ${
+                    theme === 'dark' ? 'text-white' : 'text-black'
+                  }`}>
                     Describe what this workflow should do
                   </h3>
                   <Textarea
@@ -223,7 +235,11 @@ export function EditRecordingDialog({
                     value={userPrompt}
                     onChange={(e) => setUserPrompt(e.target.value)}
                     placeholder="Describe the purpose and behavior of this workflow. The AI will use this to optimize the steps..."
-                    className="min-h-[300px] text-lg ml-1 focus:outline-black focus:outline-2 p-5"
+                    className={`min-h-[300px] text-lg ml-1 p-5 ${
+                      theme === 'dark' 
+                        ? 'bg-gray-900 border-gray-600 text-white placeholder-gray-400 focus:outline-cyan-400 focus:outline-2' 
+                        : 'bg-white border-gray-300 text-black focus:outline-black focus:outline-2'
+                    }`}
                   />
                 </div>
               </div>
@@ -232,47 +248,83 @@ export function EditRecordingDialog({
             {/* Right side - Statistics Summary */}
             <div className="flex flex-col gap-6">
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-purple-50 p-6 rounded-xl border border-purple-100">
+                <div className={`p-6 rounded-xl border ${
+                  theme === 'dark' 
+                    ? 'bg-black border-gray-600' 
+                    : 'bg-purple-50 border-purple-100'
+                }`}>
                   <div className="flex items-center gap-3">
-                    <ListChecks className="h-6 w-6 text-purple-600" />
+                    <ListChecks className={`h-6 w-6 ${
+                      theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
+                    }`} />
                     <div>
-                      <p className="text-sm text-purple-600 font-medium">
+                      <p className={`text-sm font-medium ${
+                        theme === 'dark' ? 'text-purple-300' : 'text-purple-600'
+                      }`}>
                         Total Steps
                       </p>
-                      <p className="text-2xl font-bold">
+                      <p className={`text-2xl font-bold ${
+                        theme === 'dark' ? 'text-white' : 'text-black'
+                      }`}>
                         {editedData.steps?.length || 0}
                       </p>
                     </div>
                   </div>
                 </div>
-                <div className="bg-blue-50 p-6 rounded-xl border border-blue-100">
+                <div className={`p-6 rounded-xl border ${
+                  theme === 'dark' 
+                    ? 'bg-black border-gray-600' 
+                    : 'bg-blue-50 border-blue-100'
+                }`}>
                   <div className="flex items-center gap-3">
-                    <Activity className="h-6 w-6 text-blue-600" />
+                    <Activity className={`h-6 w-6 ${
+                      theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+                    }`} />
                     <div>
-                      <p className="text-sm text-blue-600 font-medium">
+                      <p className={`text-sm font-medium ${
+                        theme === 'dark' ? 'text-blue-300' : 'text-blue-600'
+                      }`}>
                         Step Types
                       </p>
-                      <p className="text-2xl font-bold">
+                      <p className={`text-2xl font-bold ${
+                        theme === 'dark' ? 'text-white' : 'text-black'
+                      }`}>
                         {Object.keys(getStepTypeCount()).length}
                       </p>
                     </div>
                   </div>
                 </div>
-                <div className="bg-green-50 p-6 rounded-xl border border-green-100">
+                <div className={`p-6 rounded-xl border ${
+                  theme === 'dark' 
+                    ? 'bg-black border-gray-600' 
+                    : 'bg-green-50 border-green-100'
+                }`}>
                   <div className="flex items-center gap-3">
-                    <Clock className="h-6 w-6 text-green-600" />
+                    <Clock className={`h-6 w-6 ${
+                      theme === 'dark' ? 'text-green-400' : 'text-green-600'
+                    }`} />
                     <div>
-                      <p className="text-sm text-green-600 font-medium">
+                      <p className={`text-sm font-medium ${
+                        theme === 'dark' ? 'text-green-300' : 'text-green-600'
+                      }`}>
                         Recording Time
                       </p>
-                      <p className="text-2xl font-bold">{recordingStartTime}</p>
+                      <p className={`text-2xl font-bold ${
+                        theme === 'dark' ? 'text-white' : 'text-black'
+                      }`}>{recordingStartTime}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-xl border">
-                <h3 className="text-lg font-semibold mb-4">
+              <div className={`p-6 rounded-xl border ${
+                theme === 'dark' 
+                  ? 'bg-black border-gray-600' 
+                  : 'bg-white border-gray-300'
+              }`}>
+                <h3 className={`text-lg font-semibold mb-4 ${
+                  theme === 'dark' ? 'text-white' : 'text-black'
+                }`}>
                   Step Type Distribution
                 </h3>
                 <div className="space-y-3">
@@ -281,8 +333,12 @@ export function EditRecordingDialog({
                       key={type}
                       className="flex items-center justify-between"
                     >
-                      <span className="text-gray-600">{type}</span>
-                      <span className="font-medium">{count}</span>
+                      <span className={`${
+                        theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                      }`}>{type}</span>
+                      <span className={`font-medium ${
+                        theme === 'dark' ? 'text-white' : 'text-black'
+                      }`}>{count}</span>
                     </div>
                   ))}
                 </div>
