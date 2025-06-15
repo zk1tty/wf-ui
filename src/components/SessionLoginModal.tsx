@@ -154,7 +154,7 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
                     <Download className="h-3 w-3 mr-1" />
                     Get Extension
                   </Button>
-                  <Button
+                  {/* <Button
                     variant="ghost"
                     size="sm"
                     onClick={copyExtensionUrl}
@@ -166,7 +166,7 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
                   >
                     <Copy className="h-3 w-3 mr-1" />
                     Copy URL
-                  </Button>
+                  </Button> */}
                 </div>
               </div>
             </AlertDescription>
