@@ -97,7 +97,11 @@ export function RunWorkflowDialog() {
         value: input.value,
       }));
 
-      await executeWorkflow(currentWorkflowData!.name, inputFields);
+      const workflowId = currentWorkflowData!.id;
+      if (!workflowId) {
+        throw new Error('Workflow ID not available');
+      }
+      await executeWorkflow(workflowId, inputFields);
       setActiveDialog(null);
     } catch (error) {
       console.error('Failed to execute workflow:', error);
