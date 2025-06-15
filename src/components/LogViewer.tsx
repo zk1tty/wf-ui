@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export const LogViewer = () => {
   const {
@@ -11,6 +12,7 @@ export const LogViewer = () => {
     cancelWorkflowExecution,
     currentTaskId,
   } = useAppContext();
+  const { theme } = useTheme();
 
   const [isCancelling, setIsCancelling] = useState(false);
   const logContainerRef = useRef<HTMLDivElement>(null);
@@ -94,17 +96,31 @@ export const LogViewer = () => {
   };
 
   return (
-    <div className="p-4 h-full">
-      <div className="max-w-6xl mx-auto h-full flex flex-col border border-[#ddd] rounded-md overflow-hidden bg-[#f8f9fa] font-mono">
-        <div className="flex justify-between px-2 py-1 bg-[#f0f2f5] border-b border-[#ddd]">
-          <div className="font-semibold text-[#333]">
+    <div className={`p-4 h-full ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}>
+      <div className={`max-w-6xl mx-auto h-full flex flex-col border rounded-md overflow-hidden font-mono ${
+        theme === 'dark' 
+          ? 'border-gray-700 bg-gray-900' 
+          : 'border-[#ddd] bg-[#f8f9fa]'
+      }`}>
+        <div className={`flex justify-between px-2 py-1 border-b ${
+          theme === 'dark' 
+            ? 'bg-gray-800 border-gray-700' 
+            : 'bg-[#f0f2f5] border-[#ddd]'
+        }`}>
+          <div className={`font-semibold ${
+            theme === 'dark' ? 'text-white' : 'text-[#333]'
+          }`}>
             Workflow Execution Logs
           </div>
           <div className="flex items-center gap-2.5">
             <div className="flex items-center gap-2">
               {workflowStatus === 'running' && (
                 <button
-                  className={`flex items-center gap-1 py-1 px-2 bg-[#fff2f0] border border-[#ffccc7] rounded text-xs text-[#ff4d4f] transition hover:bg-[#fff1f0] hover:border-[#ffa39e] ${
+                  className={`flex items-center gap-1 py-1 px-2 border rounded text-xs transition ${
+                    theme === 'dark'
+                      ? 'bg-gray-700 border-gray-600 text-red-400 hover:bg-gray-600 hover:border-gray-500'
+                      : 'bg-[#fff2f0] border-[#ffccc7] text-[#ff4d4f] hover:bg-[#fff1f0] hover:border-[#ffa39e]'
+                  } ${
                     isCancelling ? 'opacity-60 cursor-not-allowed' : ''
                   }`}
                   onClick={handleCancel}
@@ -115,7 +131,11 @@ export const LogViewer = () => {
               )}
               {logData.length > 0 && (
                 <button
-                  className="flex items-center gap-1 py-1 px-2 bg-[#f5f5f5] border border-[#ddd] rounded text-xs text-[#333] hover:bg-[#e6e6e6] hover:border-[#ccc]"
+                  className={`flex items-center gap-1 py-1 px-2 border rounded text-xs transition ${
+                    theme === 'dark' 
+                      ? 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600 hover:border-gray-500' 
+                      : 'bg-[#f5f5f5] border-[#ddd] text-[#333] hover:bg-[#e6e6e6] hover:border-[#ccc]'
+                  }`}
                   onClick={downloadLogs}
                 >
                   Download
@@ -134,13 +154,19 @@ export const LogViewer = () => {
         </div>
 
         <div
-          className="flex-1 overflow-y-auto p-3 text-xs leading-normal whitespace-pre-wrap break-words bg-white text-[#333] min-h-0 max-h-[calc(100vh-15rem)]"
+          className={`flex-1 overflow-y-auto p-3 text-xs leading-normal whitespace-pre-wrap break-words min-h-0 max-h-[calc(100vh-15rem)] ${
+            theme === 'dark' 
+              ? 'bg-gray-900 text-gray-300' 
+              : 'bg-white text-[#333]'
+          }`}
           ref={logContainerRef}
         >
           {logData.length > 0 ? (
             logData.map((log, index) => formatLog(log, index))
           ) : (
-            <div className="text-[#999] italic py-5 text-center">
+            <div className={`italic py-5 text-center ${
+              theme === 'dark' ? 'text-gray-400' : 'text-[#999]'
+            }`}>
               {workflowStatus === 'running'
                 ? 'Waiting for logs...'
                 : 'No logs available'}

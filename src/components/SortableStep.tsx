@@ -15,6 +15,7 @@ import { GripVertical, Trash2 } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { stepSchema } from '@/types/workflow-layout.types';
+import { useTheme } from '@/contexts/ThemeContext';
 
 type Step = z.infer<typeof stepSchema>;
 type StepType = z.infer<typeof stepSchema>['type'];
@@ -38,6 +39,7 @@ export function SortableStep({
   disabled = false,
 }: SortableStepProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { theme } = useTheme();
   const {
     attributes,
     listeners,
@@ -60,10 +62,14 @@ export function SortableStep({
     <Card
       ref={setNodeRef}
       style={style}
-      className={`bg-white ${isDragging ? 'shadow-lg' : ''}`}
+      className={`${
+        theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
+      } ${isDragging ? 'shadow-lg' : ''}`}
     >
       <CardHeader className="pb-2">
-        <CardTitle className="flex justify-between items-center">
+        <CardTitle className={`flex justify-between items-center ${
+          theme === 'dark' ? 'text-white' : 'text-black'
+        }`}>
           <span className="flex gap-2 items-center">
             <GripVertical
               className={`w-4 h-4 ${disabled ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 cursor-grab'}`}
@@ -86,7 +92,7 @@ export function SortableStep({
       <CardContent className="space-y-2">
         <div className="space-y-2">
           <div>
-            <Label className="capitalize">type</Label>
+            <Label className={`capitalize ${theme === 'dark' ? 'text-white' : ''}`}>type</Label>
             <Select
               value={step.type}
               onValueChange={(val) => onUpdate(index, 'type', val)}
@@ -106,7 +112,7 @@ export function SortableStep({
           </div>
 
           <div>
-            <Label className="capitalize">description</Label>
+            <Label className={`capitalize ${theme === 'dark' ? 'text-white' : ''}`}>description</Label>
             <Input
               value={step.description ?? ''}
               onChange={(e) => onUpdate(index, 'description', e.target.value)}
@@ -136,7 +142,7 @@ export function SortableStep({
 
               return (
                 <div key={key}>
-                  <Label className="capitalize">{key}</Label>
+                  <Label className={`capitalize ${theme === 'dark' ? 'text-white' : ''}`}>{key}</Label>
                   <Input
                     value={(value as string) ?? ''}
                     onChange={(e) =>
@@ -155,7 +161,11 @@ export function SortableStep({
             variant="outline"
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="w-full hover:bg-gray-100"
+            className={`w-full ${
+              theme === 'dark' 
+                ? 'hover:bg-gray-800 text-white border-gray-600' 
+                : 'hover:bg-gray-100'
+            }`}
           >
             {isExpanded ? 'Show Less' : 'Show More'}
           </Button>

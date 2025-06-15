@@ -20,6 +20,7 @@ import {
 } from '@/utils/authUtils';
 import { detectExtensionContext } from '@/utils/extensionUtils';
 import { useAppContext } from '@/contexts/AppContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface SessionStatusProps {
   className?: string;
@@ -33,6 +34,7 @@ export const SessionStatus: React.FC<SessionStatusProps> = ({
   compact = false 
 }) => {
   const { currentUserSessionToken, setCurrentUserSessionToken } = useAppContext();
+  const { theme } = useTheme();
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [authType, setAuthType] = useState<string | null>(null);
   const [fromExtension, setFromExtension] = useState(false);
@@ -99,7 +101,11 @@ export const SessionStatus: React.FC<SessionStatusProps> = ({
   }
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg p-4 ${className}`}>
+    <div className={`border rounded-lg p-4 ${
+      theme === 'dark' 
+        ? 'bg-gray-900 border-gray-700' 
+        : 'bg-white border-gray-200'
+    } ${className}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           {isAuthenticated ? (
@@ -110,7 +116,9 @@ export const SessionStatus: React.FC<SessionStatusProps> = ({
           
           <div>
             <div className="flex items-center space-x-2">
-              <span className="font-medium text-gray-900">
+              <span className={`font-medium ${
+                theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}>
                 {isAuthenticated ? 'Authenticated' : 'Not Authenticated'}
               </span>
               
@@ -132,7 +140,9 @@ export const SessionStatus: React.FC<SessionStatusProps> = ({
             </div>
             
             {showDetails && (
-              <p className="text-sm text-gray-600 mt-1">
+              <p className={`text-sm mt-1 ${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+              }`}>
                 {isAuthenticated 
                   ? `Session active • Last checked: ${lastChecked.toLocaleTimeString()}`
                   : 'Login through Chrome extension to edit workflows'
@@ -148,7 +158,11 @@ export const SessionStatus: React.FC<SessionStatusProps> = ({
               variant="ghost"
               size="sm"
               onClick={refreshStatus}
-              className="text-gray-600 hover:text-gray-800"
+              className={`${
+                theme === 'dark' 
+                  ? 'text-gray-300 hover:text-white hover:bg-gray-800' 
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
             >
               <Clock className="h-3 w-3 mr-1" />
               Refresh
@@ -170,23 +184,39 @@ export const SessionStatus: React.FC<SessionStatusProps> = ({
       </div>
       
       {showDetails && isAuthenticated && (
-        <div className="mt-3 pt-3 border-t border-gray-200">
+        <div className={`mt-3 pt-3 border-t ${
+          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+        }`}>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-gray-500">Auth Type:</span>
-              <span className="ml-2 font-medium">
+              <span className={`${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>Auth Type:</span>
+              <span className={`ml-2 font-medium ${
+                theme === 'dark' ? 'text-white' : 'text-black'
+              }`}>
                 {isSessionAuth ? 'Session Token' : 'Legacy JWT'}
               </span>
             </div>
             <div>
-              <span className="text-gray-500">Source:</span>
-              <span className="ml-2 font-medium">
+              <span className={`${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>Source:</span>
+              <span className={`ml-2 font-medium ${
+                theme === 'dark' ? 'text-white' : 'text-black'
+              }`}>
                 {fromExtension ? 'Chrome Extension' : 'Web Interface'}
               </span>
             </div>
             <div className="col-span-2">
-              <span className="text-gray-500">Token:</span>
-              <span className="ml-2 font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+              <span className={`${
+                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>Token:</span>
+              <span className={`ml-2 font-mono text-xs px-2 py-1 rounded ${
+                theme === 'dark' 
+                  ? 'bg-gray-800 text-gray-300' 
+                  : 'bg-gray-100 text-black'
+              }`}>
                 {sessionToken ? `${sessionToken.slice(0, 8)}...${sessionToken.slice(-4)}` : 'None'}
               </span>
             </div>

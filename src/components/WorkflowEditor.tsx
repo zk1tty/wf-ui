@@ -29,6 +29,7 @@ import { workflowService } from '@/services/workflowService';
 import { canEditWorkflow } from '@/utils/authUtils';
 import AuthBanner from '@/components/AuthBanner';
 import SessionStatus from '@/components/SessionStatus';
+import { useTheme } from '@/contexts/ThemeContext';
 
 type Workflow = z.infer<typeof workflowSchema>;
 type Step = z.infer<typeof stepSchema>;
@@ -46,6 +47,7 @@ export function WorkflowEditor() {
     setActiveDialog,
     setDisplayMode,
   } = useAppContext();
+  const { theme } = useTheme();
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [oldWorkflow, setOldWorkflow] = useState<Workflow | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -264,7 +266,7 @@ export function WorkflowEditor() {
     return <div className="p-8 text-gray-500">No workflow loaded</div>;
 
   return (
-    <div className="relative min-h-screen">
+    <div className={`relative min-h-screen ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}>
       {activeDialog === 'unsavedChanges' && (
         <UnsavedChangesDialog
           onSave={saveChanges}
@@ -287,21 +289,23 @@ export function WorkflowEditor() {
           onForkWorkflow={handleForkWorkflow}
         />
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold mb-3">Workflow Details</h2>
-          <Label>Workflow Name</Label>
+          <h2 className={`text-xl font-semibold mb-3 ${
+            theme === 'dark' ? 'text-white' : 'text-black'
+          }`}>Workflow Details</h2>
+          <Label className={theme === 'dark' ? 'text-white' : ''}>Workflow Name</Label>
           <Input
             value={workflow.name}
             onChange={(e) => updateField('name', e.target.value)}
             disabled={!canEdit}
           />
-          <Label>Description</Label>
+          <Label className={theme === 'dark' ? 'text-white' : ''}>Description</Label>
           <Textarea
             value={workflow.description}
             onChange={(e) => updateField('description', e.target.value)}
             className="min-h-[100px] resize-y"
             disabled={!canEdit}
           />
-          <Label>Analysis</Label>
+          <Label className={theme === 'dark' ? 'text-white' : ''}>Analysis</Label>
           <Textarea
             value={workflow.workflow_analysis}
             onChange={(e) => updateField('workflow_analysis', e.target.value)}
@@ -311,8 +315,18 @@ export function WorkflowEditor() {
         </div>
 
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Steps</h2>
-          <Button onClick={addStep} disabled={!canEdit}>
+          <h2 className={`text-xl font-semibold ${
+            theme === 'dark' ? 'text-white' : 'text-black'
+          }`}>Steps</h2>
+          <Button 
+            onClick={addStep} 
+            disabled={!canEdit}
+            className={`${
+              theme === 'dark' 
+                ? 'bg-cyan-600 hover:bg-cyan-700 text-white border-cyan-500' 
+                : 'bg-primary hover:bg-primary/90 text-primary-foreground'
+            }`}
+          >
             <Plus className="w-4 h-4 mr-1" />
             Add Step
           </Button>
@@ -343,7 +357,9 @@ export function WorkflowEditor() {
         </DndContext>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 ml-40 bg-white border-t border-gray-200 p-4">
+      <div className={`fixed bottom-0 left-0 right-0 ml-40 border-t p-4 ${
+        theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
+      }`}>
         <div className="max-w-4xl mx-auto space-y-2">
           <Button
             className="w-full ml-10 bg-purple-600 text-white disabled:opacity-50"
