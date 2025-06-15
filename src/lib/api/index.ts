@@ -6,7 +6,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 const API = import.meta.env.VITE_PUBLIC_API_URL;
 const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
-console.log("API", API, "\n", "supabaseUrl", supabaseUrl, "\n", "supabaseAnonKey", supabaseAnonKey);
+// console.log("API", API, "\n", "supabaseUrl", supabaseUrl, "\n", "supabaseAnonKey", supabaseAnonKey);
 const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey);
 
 // Custom fetch function with auth headers
