@@ -27,6 +27,7 @@ import {
   initializeSessionFromExtension 
 } from '@/utils/authUtils';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface SessionLoginModalProps {
   open: boolean;
@@ -39,6 +40,7 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
 }) => {
   const { setCurrentUserSessionToken } = useAppContext();
   const { toast } = useToast();
+  const { theme } = useTheme();
   const [sessionToken, setSessionToken] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -82,15 +84,25 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
   };
 
   const handleGetExtension = () => {
-    // Open Chrome Web Store in new tab
-    window.open('https://chrome.google.com/webstore', '_blank');
+    // Download the Chrome extension zip file
+    const link = document.createElement('a');
+    link.href = '/chrome-extension.zip';
+    link.download = 'chrome-extension.zip';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: 'Download Started',
+      description: 'Chrome extension zip file is being downloaded.',
+    });
   };
 
   const copyExtensionUrl = () => {
-    navigator.clipboard.writeText('https://chrome.google.com/webstore');
+    navigator.clipboard.writeText('/chrome-extension.zip');
     toast({
       title: 'Copied!',
-      description: 'Extension URL copied to clipboard',
+      description: 'Extension download path copied to clipboard',
     });
   };
 
@@ -98,28 +110,46 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Chrome className="h-5 w-5 text-blue-600" />
+          <DialogTitle className={`flex items-center space-x-2 ${
+            theme === 'dark' ? 'text-white' : 'text-black'
+          }`}>
+            <Chrome className={`h-5 w-5 ${
+              theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+            }`} />
             <span>Chrome Extension Login</span>
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className={
+            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+          }>
             Login using your session token from the Chrome extension to edit workflows and manage your collection.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Extension Installation Guide */}
-          <Alert className="border-blue-200 bg-blue-50">
-            <Chrome className="h-4 w-4 text-blue-600" />
+          <Alert className={`border ${
+            theme === 'dark' 
+              ? 'border-gray-600 bg-black' 
+              : 'border-blue-200 bg-blue-50'
+          }`}>
+            <Chrome className={`h-4 w-4 ${
+              theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
+            }`} />
             <AlertDescription>
               <div className="space-y-2">
-                <p className="font-medium text-blue-800">Don't have the extension yet?</p>
+                <p className={`font-medium ${
+                  theme === 'dark' ? 'text-blue-300' : 'text-blue-800'
+                }`}>Don't have the extension yet?</p>
                 <div className="flex items-center space-x-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleGetExtension}
-                    className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                    className={`${
+                      theme === 'dark' 
+                        ? 'border-gray-600 text-blue-400 hover:bg-gray-800 bg-gray-900' 
+                        : 'border-blue-300 text-blue-700 hover:bg-blue-100'
+                    }`}
                   >
                     <Download className="h-3 w-3 mr-1" />
                     Get Extension
@@ -128,7 +158,11 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
                     variant="ghost"
                     size="sm"
                     onClick={copyExtensionUrl}
-                    className="text-blue-600 hover:text-blue-800"
+                    className={`${
+                      theme === 'dark' 
+                        ? 'text-blue-400 hover:text-blue-300 hover:bg-gray-800' 
+                        : 'text-blue-600 hover:text-blue-800'
+                    }`}
                   >
                     <Copy className="h-3 w-3 mr-1" />
                     Copy URL
@@ -140,8 +174,12 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
 
           {/* Session Token Input */}
           <div className="space-y-2">
-            <Label htmlFor="sessionToken" className="flex items-center space-x-2">
-              <Key className="h-4 w-4" />
+            <Label htmlFor="sessionToken" className={`flex items-center space-x-2 ${
+              theme === 'dark' ? 'text-white' : 'text-black'
+            }`}>
+              <Key className={`h-4 w-4 ${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+              }`} />
               <span>Session Token</span>
             </Label>
             <Input
@@ -153,28 +191,48 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
                 setSessionToken(e.target.value);
                 setValidationError(null);
               }}
-              className="font-mono text-sm"
+              className={`font-mono text-sm ${
+                theme === 'dark' 
+                  ? 'bg-gray-900 border-gray-600 text-white placeholder-gray-400' 
+                  : 'bg-white border-gray-300 text-black'
+              }`}
               disabled={isValidating}
             />
-            <p className="text-xs text-gray-600">
+            <p className={`text-xs ${
+              theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            }`}>
               Get your session token from the Chrome extension settings or popup.
             </p>
           </div>
 
           {/* Validation Error */}
           {validationError && (
-            <Alert className="border-red-200 bg-red-50">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">
+            <Alert className={`border ${
+              theme === 'dark' 
+                ? 'border-red-600 bg-red-900/20' 
+                : 'border-red-200 bg-red-50'
+            }`}>
+              <AlertCircle className={`h-4 w-4 ${
+                theme === 'dark' ? 'text-red-400' : 'text-red-600'
+              }`} />
+              <AlertDescription className={
+                theme === 'dark' ? 'text-red-300' : 'text-red-800'
+              }>
                 {validationError}
               </AlertDescription>
             </Alert>
           )}
 
           {/* Instructions */}
-          <div className="bg-gray-50 rounded-lg p-3">
-            <h4 className="font-medium text-gray-900 mb-2">How to get your session token:</h4>
-            <ol className="text-sm text-gray-700 space-y-1 list-decimal list-inside">
+          <div className={`rounded-lg p-3 ${
+            theme === 'dark' ? 'bg-gray-800 border border-gray-600' : 'bg-gray-50'
+          }`}>
+            <h4 className={`font-medium mb-2 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>How to get your session token:</h4>
+            <ol className={`text-sm space-y-1 list-decimal list-inside ${
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+            }`}>
               <li>Install and open the Chrome extension</li>
               <li>Login to your account in the extension</li>
               <li>Copy the session token from extension settings</li>
@@ -188,13 +246,22 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isValidating}
+            className={
+              theme === 'dark' 
+                ? 'border-gray-600 text-white hover:bg-gray-800' 
+                : ''
+            }
           >
             Cancel
           </Button>
           <Button
             onClick={handleSessionTokenSubmit}
             disabled={!sessionToken.trim() || isValidating}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className={`text-white ${
+              theme === 'dark' 
+                ? 'bg-blue-600 hover:bg-blue-700' 
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
           >
             {isValidating ? (
               <>
