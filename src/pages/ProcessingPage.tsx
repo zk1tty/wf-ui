@@ -179,7 +179,7 @@ export default function ProcessingPage() {
               }`} />
             </div>
             <CardTitle className={`text-2xl ${
-              theme === 'dark' ? 'text-white' : 'text-black'
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
             }`}>Loading</CardTitle>
             <CardDescription className={
               theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
@@ -212,7 +212,7 @@ export default function ProcessingPage() {
             }`} />
           </div>
           <CardTitle className={`text-2xl ${
-            theme === 'dark' ? 'text-white' : 'text-black'
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}>Processing</CardTitle>
         </CardHeader>
 
