@@ -84,18 +84,30 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
   };
 
   const handleGetExtension = () => {
-    // Download the Chrome extension zip file
-    const link = document.createElement('a');
-    link.href = '/chrome-extension.zip';
-    link.download = 'chrome-extension.zip';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast({
-      title: 'Download Started',
-      description: 'Chrome extension zip file is being downloaded.',
-    });
+    // Try multiple approaches for downloading the extension
+    try {
+      // First try: Direct download from public directory
+      const link = document.createElement('a');
+      link.href = '/chrome-extension.zip';
+      link.download = 'chrome-extension.zip';
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: 'Download Started',
+        description: 'Chrome extension zip file is being downloaded.',
+      });
+    } catch (error) {
+      // Fallback: Show instructions or redirect to GitHub releases
+      toast({
+        title: 'Download Issue',
+        description: 'Please contact support for the Chrome extension download.',
+        variant: 'destructive',
+      });
+      console.error('Download failed:', error);
+    }
   };
 
   const copyExtensionUrl = () => {
