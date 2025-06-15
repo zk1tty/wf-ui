@@ -12,6 +12,7 @@ import { workflowService } from '@/services/workflowService';
 // import { fetchWorkflowLogs, cancelWorkflow } from '@/services/pollingService';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
+import { hasValidSessionToken } from '@/utils/authUtils';
 
 export type DisplayMode = 'canvas' | 'editor' | 'start';
 export type DialogType =
@@ -288,17 +289,24 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         return;
       }
 
+      // Check authentication before attempting execution
+      if (!hasValidSessionToken(currentUserSessionToken)) {
+        setWorkflowError('Please login through the Chrome extension to execute workflows.');
+        setWorkflowStatus('failed');
+        return;
+      }
+
       setWorkflowError(null);
       setCurrentTaskId(null);
       setLogPosition(0);
       setWorkflowStatus('idle');
 
       try {
-        // Use session token if available for execution
+        // Use session token for execution
         const result = await workflowService.executeWorkflow(
           workflowId, 
           inputFields, 
-          currentUserSessionToken || undefined
+          currentUserSessionToken!  // We've already validated it's not null above
         );
         setCurrentTaskId(result.task_id);
         setLogPosition(result.log_position);
@@ -306,10 +314,27 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         setDisplayMode('canvas');
         startPollingLogs(result.task_id);
       } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : 'An error occurred while executing the workflow';
+        console.error('Workflow execution failed:', err);
+        
+        // Provide user-friendly error messages
+        let errorMessage = 'An error occurred while executing the workflow';
+        
+        if (err instanceof Error) {
+          const errorText = err.message.toLowerCase();
+          
+          // Handle authentication-related errors
+          if (errorText.includes('jwt') || errorText.includes('session authentication') || errorText.includes('unauthorized')) {
+            errorMessage = 'Please login through the Chrome extension to execute workflows.';
+          } else if (errorText.includes('session token') || errorText.includes('invalid token')) {
+            errorMessage = 'Your session has expired. Please login again through the Chrome extension.';
+          } else if (errorText.includes('not found') || errorText.includes('404')) {
+            errorMessage = 'Workflow not found. Please refresh the page and try again.';
+          } else {
+            // Use the original error message for other cases
+            errorMessage = err.message;
+          }
+        }
+        
         setWorkflowError(errorMessage);
         setWorkflowStatus('failed');
         stopPollingLogs();

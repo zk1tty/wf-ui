@@ -105,9 +105,27 @@ export function RunWorkflowDialog() {
       setActiveDialog(null);
     } catch (error) {
       console.error('Failed to execute workflow:', error);
-      setValidationError(
-        error instanceof Error ? error.message : 'Failed to execute workflow'
-      );
+      
+      // Provide user-friendly error messages
+      let errorMessage = 'Failed to execute workflow';
+      
+      if (error instanceof Error) {
+        const errorText = error.message.toLowerCase();
+        
+        // Handle authentication-related errors
+        if (errorText.includes('jwt') || errorText.includes('session authentication') || errorText.includes('unauthorized')) {
+          errorMessage = 'Please login through the Chrome extension to execute workflows.';
+        } else if (errorText.includes('session token') || errorText.includes('invalid token')) {
+          errorMessage = 'Your session has expired. Please login again through the Chrome extension.';
+        } else if (errorText.includes('not found') || errorText.includes('404')) {
+          errorMessage = 'Workflow not found. Please refresh the page and try again.';
+        } else {
+          // Use the original error message for other cases
+          errorMessage = error.message;
+        }
+      }
+      
+      setValidationError(errorMessage);
     } finally {
       setIsExecuting(false);
     }
