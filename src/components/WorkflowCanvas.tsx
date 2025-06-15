@@ -16,6 +16,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { WorkflowStepNode } from './WorkflowStepNode';
 import { useAppContext } from '@/contexts/AppContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const nodeTypes = {
   workflowStep: WorkflowStepNode,
@@ -23,6 +24,7 @@ const nodeTypes = {
 
 export function WorkflowCanvas() {
   const { currentWorkflowData } = useAppContext();
+  const { theme } = useTheme();
   const reactFlowInstanceRef = useRef<ReactFlowInstance | null>(null);
 
   const initialNodes: Node[] = useMemo(() => {
@@ -85,8 +87,22 @@ export function WorkflowCanvas() {
     });
   }, [currentWorkflowData, initialNodes, initialEdges, setNodes, setEdges]);
 
+  // Theme-based styling
+  const canvasStyle = {
+    backgroundColor: theme === 'dark' ? '#000000' : '#f9fafb'
+  };
+  
+  const backgroundClass = theme === 'dark' ? 'bg-black canvas-dots-dark' : 'bg-gray-50';
+  const backgroundGridColor = theme === 'dark' ? '#333333' : '#e5e7eb';
+  const controlsClass = theme === 'dark' 
+    ? 'bg-gray-800 border border-gray-600 rounded-lg shadow-sm text-white' 
+    : 'bg-white border border-gray-200 rounded-lg shadow-sm';
+  const minimapClass = theme === 'dark'
+    ? 'bg-gray-800 border border-gray-600 rounded-lg shadow-sm'
+    : 'bg-white border border-gray-200 rounded-lg shadow-sm';
+
   return (
-    <div className="w-full h-full bg-gray-50">
+    <div className={`w-full h-full ${backgroundClass}`}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -98,21 +114,22 @@ export function WorkflowCanvas() {
           reactFlowInstanceRef.current = instance;
         }}
         fitView
-        style={{ backgroundColor: '#f9fafb' }}
+        style={canvasStyle}
         defaultViewport={{ x: 0, y: 0, zoom: 0 }}
       >
-        <Background color="#e5e7eb" gap={20} />
-        <Controls className="bg-white border border-gray-200 rounded-lg shadow-sm" />
+        <Background color={backgroundGridColor} gap={20} />
+        <Controls className={controlsClass} />
         <MiniMap
-          className="bg-white border border-gray-200 rounded-lg shadow-sm"
+          className={minimapClass}
           nodeColor={(node) => {
-            if (node.data?.action === 'navigation') return '#3b82f6';
-            if (node.data?.action === 'click') return '#10b981';
-            if (node.data?.action === 'input') return '#f59e0b';
-            if (node.data?.action === 'key_press') return '#8b5cf6';
-            if (node.data?.action === 'agent') return '#6b7280';
-            if (node.data?.action === 'select_change') return '#06b6d4';
-            return '#6b7280';
+            // Enhanced colors for dark mode visibility
+            if (node.data?.action === 'navigation') return theme === 'dark' ? '#60a5fa' : '#3b82f6';
+            if (node.data?.action === 'click') return theme === 'dark' ? '#34d399' : '#10b981';
+            if (node.data?.action === 'input') return theme === 'dark' ? '#fbbf24' : '#f59e0b';
+            if (node.data?.action === 'key_press') return theme === 'dark' ? '#a78bfa' : '#8b5cf6';
+            if (node.data?.action === 'agent') return theme === 'dark' ? '#9ca3af' : '#6b7280';
+            if (node.data?.action === 'select_change') return theme === 'dark' ? '#22d3ee' : '#06b6d4';
+            return theme === 'dark' ? '#9ca3af' : '#6b7280';
           }}
         />
       </ReactFlow>
