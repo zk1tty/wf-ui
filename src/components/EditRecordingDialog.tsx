@@ -365,7 +365,7 @@ export function EditRecordingDialog({
                   Building...
                 </>
               ) : (
-                'Build Workflow'
+                'Coming Soon 🚀'
               )}
             </Button>
           </DialogFooter>

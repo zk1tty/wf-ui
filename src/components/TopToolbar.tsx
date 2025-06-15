@@ -1,4 +1,4 @@
-import { Play, Settings, Edit3, Blocks, SidebarOpen, Terminal, Palette, LogIn, Moon, Sun } from 'lucide-react';
+import { Play, Settings, Edit3, Blocks, SidebarOpen, Terminal, Palette, LogIn, Moon, Sun, Link, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAppContext } from '@/contexts/AppContext';
@@ -8,6 +8,7 @@ import { hasValidSessionToken, canEditWorkflow } from '@/utils/authUtils';
 import SessionLoginModal from '@/components/SessionLoginModal';
 import SessionStatus from '@/components/SessionStatus';
 import { CompactExtensionIndicator } from '@/components/ExtensionBanner';
+import { useToast } from '@/hooks/use-toast';
 
 export function TopToolbar() {
   const {
@@ -23,6 +24,7 @@ export function TopToolbar() {
   } = useAppContext();
   
   const { theme, toggleTheme } = useTheme();
+  const { toast } = useToast();
   const [showLoginModal, setShowLoginModal] = useState(false);
   
   const hasSessionToken = hasValidSessionToken(currentUserSessionToken);
@@ -100,6 +102,30 @@ export function TopToolbar() {
     }
     console.log('Navigating to gallery');
     setDisplayMode('start');
+  };
+
+  const handleShareWorkflow = async () => {
+    if (!currentWorkflowData) return;
+    
+    // Generate the workflow URL
+    const workflowUrl = isCurrentWorkflowPublic 
+      ? `${window.location.origin}/wf/${currentWorkflowData.id}`
+      : `${window.location.origin}/workflows/${currentWorkflowData.name}`;
+    
+    try {
+      await navigator.clipboard.writeText(workflowUrl);
+      toast({
+        title: 'Link Copied! 🔗',
+        description: 'Workflow link has been copied to your clipboard.',
+      });
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      toast({
+        title: 'Copy Failed',
+        description: 'Unable to copy link to clipboard. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -215,6 +241,22 @@ export function TopToolbar() {
                     <Edit3 className="w-5 h-5" />
                     Edit
                   </>}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={handleShareWorkflow}
+              disabled={!currentWorkflowData}
+              className={`flex items-center gap-2 text-base px-6 py-3 disabled:opacity-50 ${
+                theme === 'dark' 
+                  ? 'text-cyan-400 hover:text-cyan-300 hover:bg-gray-800 border-gray-600' 
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+              }`}
+              title="Share workflow link"
+            >
+              <ExternalLink className="w-5 h-5" />
+              Share
             </Button>
           </div>
         </div>
