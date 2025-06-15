@@ -11,8 +11,8 @@ export interface OwnershipCheckResponse {
 
 /**
  * Check if current user owns a workflow
- * Handles UUID-based ownership and NULL legacy workflows
- * Uses session-based API call (no Authorization headers)
+ * Uses session-based authentication with query parameter
+ * Based on working backend API: GET /workflows/{id}/ownership?session_token=TOKEN
  */
 export const checkWorkflowOwnership = async (
   sessionToken: string, 
@@ -20,21 +20,39 @@ export const checkWorkflowOwnership = async (
 ): Promise<boolean> => {
   try {
     console.log('🔐 [Auth] Checking ownership for workflow:', workflowId);
+    console.log('🔐 [Auth] Session token type:', sessionToken.startsWith('eyJ') ? 'JWT' : 'Other');
     
-    // Import sessionApiFetch dynamically to avoid circular imports
-    const { sessionApiFetch } = await import('@/lib/api');
+    const API = import.meta.env.VITE_PUBLIC_API_URL;
+    const url = `${API}/workflows/${workflowId}/ownership?session_token=${encodeURIComponent(sessionToken)}`;
     
-    const data: OwnershipCheckResponse = await sessionApiFetch(
-      `/workflows/${workflowId}/ownership`,
-      {
-        sessionToken,
-        body: JSON.stringify({ workflow_id: workflowId }),
-        method: 'POST'
+    console.log('🔐 [Auth] Making ownership request to:', url.replace(sessionToken, '[TOKEN]'));
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 
+        'Content-Type': 'application/json'
       }
-    );
+    });
     
-    console.log('🔐 [Auth] Ownership check result:', data);
-    return data.is_owner;
+    console.log(`🔐 [Auth] Response status: ${response.status} ${response.statusText}`);
+    
+    if (response.ok) {
+      const data: OwnershipCheckResponse = await response.json();
+      console.log('🔐 [Auth] ✅ Ownership check successful:', data);
+      return data.is_owner;
+    } else {
+      const errorText = await response.text();
+      console.error(`🔐 [Auth] ❌ Ownership check failed: ${response.status} - ${errorText}`);
+      
+      if (response.status === 401) {
+        console.log('🔐 [Auth] Unauthorized - invalid or expired session token');
+      } else if (response.status === 404) {
+        console.log('🔐 [Auth] Workflow not found');
+      }
+      
+      return false;
+    }
+    
   } catch (error) {
     console.error('🔐 [Auth] Error checking ownership:', error);
     return false;
@@ -137,18 +155,39 @@ export const canEditWorkflow = (
   isPublicWorkflow: boolean,
   isLegacyWorkflow: boolean = false
 ): boolean => {
+  console.log('🔍 [canEditWorkflow] Input parameters:', {
+    sessionToken: sessionToken ? `${sessionToken.slice(0,8)}...` : null,
+    isOwner,
+    isPublicWorkflow,
+    isLegacyWorkflow
+  });
+
   // No session token = no editing
-  if (!hasValidSessionToken(sessionToken)) return false;
+  if (!hasValidSessionToken(sessionToken)) {
+    console.log('🔍 [canEditWorkflow] Result: false (no valid session token)');
+    return false;
+  }
   
   // Owner can always edit their workflows
-  if (isOwner) return true;
+  if (isOwner) {
+    console.log('🔍 [canEditWorkflow] Result: true (user is owner)');
+    return true;
+  }
   
   // Legacy workflows (owner_id = NULL) can be edited by any authenticated user
-  if (isLegacyWorkflow) return true;
+  if (isLegacyWorkflow) {
+    console.log('🔍 [canEditWorkflow] Result: true (legacy workflow)');
+    return true;
+  }
   
   // Public workflows owned by others = read-only (fork required)
-  if (isPublicWorkflow && !isOwner) return false;
+  if (isPublicWorkflow && !isOwner) {
+    console.log('🔍 [canEditWorkflow] Result: false (public workflow, not owner)');
+    return false;
+  }
   
   // Private workflows = owner only
-  return isOwner;
+  const result = isOwner;
+  console.log('🔍 [canEditWorkflow] Result:', result, '(private workflow, owner check)');
+  return result;
 }; 

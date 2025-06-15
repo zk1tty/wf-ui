@@ -13,12 +13,12 @@ export interface WorkflowService {
   uploadWorkflow(recordingData: any, sessionToken?: string): Promise<{ job_id: string }>;
   getUploadStatus(jobId: string): Promise<any>;
   updateWorkflowMetadata(
-    name: string,
+    workflowId: string,
     metadata: WorkflowMetadata,
     sessionToken?: string
-  ): Promise<void>;
+  ): Promise<any>;
   executeWorkflow(
-    name: string,
+    workflowId: string,
     inputFields: z.infer<typeof inputFieldSchema>[],
     sessionToken?: string
   ): Promise<{
@@ -34,9 +34,15 @@ export interface WorkflowService {
   stopRecording(): Promise<any>;
   fetchWorkflowLogs(taskId: string, position: number): Promise<any>;
   cancelWorkflow(taskId: string): Promise<any>;
+  updateWorkflow(
+    workflowId: string,
+    workflowData: any,
+    sessionToken?: string
+  ): Promise<any>;
   deleteStep(
-    workflowName: string,
-    stepIndex: number
+    workflowId: string,
+    stepIndex: number,
+    sessionToken?: string
   ): Promise<{ success: boolean; error?: string }>;
 }
 
@@ -144,11 +150,13 @@ class WorkflowServiceImpl implements WorkflowService {
     try {
       // If session token is provided, use session-based auth
       if (sessionToken) {
-        const { sessionApiFetch } = await import('../lib/api');
-        const response = await sessionApiFetch<{ job_id: string }>('/workflows/upload', {
-          sessionToken,
-          body: JSON.stringify(recordingData),
-          method: 'POST'
+        const response = await apiFetch<{ job_id: string }>('/workflows/upload/session', {
+          method: 'POST',
+          body: JSON.stringify({
+            ...recordingData,
+            session_token: sessionToken
+          }),
+          auth: false
         });
         
         console.log('[workflowService] Upload response (session-based):', response);
@@ -182,17 +190,23 @@ class WorkflowServiceImpl implements WorkflowService {
   }
 
   async updateWorkflowMetadata(
-    name: string,
+    workflowId: string,
     metadata: WorkflowMetadata,
     sessionToken?: string
   ): Promise<any> {
     // Use session-based API if session token is provided
     if (sessionToken) {
       try {
-        const data = await sessionApiFetch<{ success: boolean; error?: string }>('/workflows/update-metadata', {
-          sessionToken,
-          body: JSON.stringify({ name, metadata: metadata as any }),
-          method: 'POST'
+        const data = await apiFetch<{ success: boolean; error?: string }>(`/workflows/${workflowId}/metadata/session`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: metadata.name,
+            description: metadata.description,
+            workflow_analysis: metadata.workflow_analysis,
+            version: metadata.version,
+            session_token: sessionToken
+          }),
+          auth: false
         });
         
         console.log('Response from updateWorkflowMetadata (session-based):', data);
@@ -207,63 +221,74 @@ class WorkflowServiceImpl implements WorkflowService {
       }
     }
     
-    // Fallback to JWT-based API
-    const response = await fetchClient.POST('/api/workflows/update-metadata', {
-      body: { name, metadata: metadata as any },
-    });
-    console.log('Response from updateWorkflowMetadata (JWT-based):', response);
-    if (!response.data) {
-      throw new Error('Failed to return data from server');
-    }
-    
-    const data = response.data;
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to update workflow metadata');
-    }
-    
-    return data;
+    // Fallback to JWT-based API (legacy support)
+    throw new Error('JWT-based workflow metadata updates are no longer supported. Please use session authentication.');
   }
 
   async updateWorkflow(
-    filename: string,
-    nodeId: number,
-    stepData: any
+    workflowId: string,
+    workflowData: any,
+    sessionToken?: string
   ): Promise<any> {
-    const response = await fetchClient.POST('/api/workflows/update', {
-      body: { filename, nodeId, stepData },
-    });
-    console.log('Response from updateWorkflow:', response);
-    if (!response.data) {
-      throw new Error('Failed to return data from server');
+    // Use session-based API if session token is provided
+    if (sessionToken) {
+      try {
+        const data = await apiFetch<{ success: boolean; error?: string }>(`/workflows/${workflowId}/session`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            workflow_data: workflowData,
+            session_token: sessionToken
+          }),
+          auth: false
+        });
+        
+        console.log('Response from updateWorkflow (session-based):', data);
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to update workflow');
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('Session-based updateWorkflow failed:', error);
+        throw error;
+      }
     }
     
-    const data = response.data;
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to update workflow');
-    }
-    
-    return data;
+    // Fallback to JWT-based API (legacy support)
+    throw new Error('JWT-based workflow updates are no longer supported. Please use session authentication.');
   }
 
-  async deleteStep(workflowName: string, stepIndex: number): Promise<any> {
-    const response = await fetchClient.POST('/api/workflows/delete-step', {
-      body: { workflowName, stepIndex },
-    });
-    console.log('Response from deleteStep:', response);
-    if (!response.data) {
-      throw new Error('Failed to return data from server');
+  async deleteStep(workflowId: string, stepIndex: number, sessionToken?: string): Promise<any> {
+    // Use session-based API if session token is provided
+    if (sessionToken) {
+      try {
+        const data = await apiFetch<{ success: boolean; error?: string }>(`/workflows/${workflowId}/steps/${stepIndex}/session`, {
+          method: 'DELETE',
+          body: JSON.stringify({
+            step_index: stepIndex,
+            session_token: sessionToken
+          }),
+          auth: false
+        });
+        
+        console.log('Response from deleteStep (session-based):', data);
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to delete step');
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('Session-based deleteStep failed:', error);
+        throw error;
+      }
     }
     
-    const data = response.data;
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to delete step');
-    }
-    
-    return data;
+    // Fallback to JWT-based API (legacy support) 
+    throw new Error('JWT-based step deletion is no longer supported. Please use session authentication.');
   }
 
   async executeWorkflow(
-    name: string,
+    workflowId: string,
     inputFields: z.infer<typeof inputFieldSchema>[],
     sessionToken?: string
   ): Promise<{
@@ -279,14 +304,17 @@ class WorkflowServiceImpl implements WorkflowService {
     // Use session-based API if session token is provided
     if (sessionToken) {
       try {
-        const data = await sessionApiFetch<{
+        const data = await apiFetch<{
           task_id: string;
           log_position: number;
           message: string;
-        }>('/workflows/execute', {
-          sessionToken,
-          body: JSON.stringify({ name, inputs }),
-          method: 'POST'
+        }>(`/workflows/${workflowId}/execute/session`, {
+          method: 'POST',
+          body: JSON.stringify({
+            inputs,
+            session_token: sessionToken
+          }),
+          auth: false
         });
         
         console.log('Response from executeWorkflow (session-based):', data);
@@ -297,15 +325,8 @@ class WorkflowServiceImpl implements WorkflowService {
       }
     }
 
-    // Fallback to JWT-based API
-    const response = await fetchClient.POST('/api/workflows/execute', {
-      body: { name, inputs },
-    });
-    if (!response.data) {
-      throw new Error('Failed to return data from server');
-    }
-
-    return response.data;
+    // Fallback to JWT-based API (legacy support)
+    throw new Error('JWT-based workflow execution is no longer supported. Please use session authentication.');
   }
 
   async recordWorkflow(): Promise<any> {
