@@ -190,4 +190,70 @@ export const canEditWorkflow = (
   const result = isOwner;
   console.log('🔍 [canEditWorkflow] Result:', result, '(private workflow, owner check)');
   return result;
+};
+
+/**
+ * Validate session token with backend
+ * Makes a lightweight API call to check if the token is still valid
+ */
+export const validateSessionToken = async (sessionToken: string): Promise<boolean> => {
+  try {
+    // Safety check: Don't validate null, undefined, or empty tokens
+    if (!sessionToken || typeof sessionToken !== 'string' || sessionToken.trim().length === 0) {
+      console.log('🔐 [Auth] ❌ Cannot validate empty or null session token');
+      return false;
+    }
+
+    console.log('🔐 [Auth] Validating session token...', {
+      tokenLength: sessionToken.length,
+      tokenPreview: `${sessionToken.slice(0,8)}...${sessionToken.slice(-4)}`
+    });
+    
+    const API = import.meta.env.VITE_PUBLIC_API_URL;
+    
+    // Safety check: Ensure API URL exists
+    if (!API) {
+      console.error('🔐 [Auth] ❌ API URL not configured');
+      return false;
+    }
+
+    // Use a lightweight endpoint to validate the token
+    const url = `${API}/auth/validate?session_token=${encodeURIComponent(sessionToken)}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const isValid = response.ok;
+    console.log(`🔐 [Auth] Session validation result: ${isValid ? '✅ Valid' : '❌ Invalid/Expired'} (${response.status})`);
+    
+    // If invalid, clear the stored token
+    if (!isValid) {
+      console.log('🔐 [Auth] Clearing invalid session token');
+      clearStoredAuth();
+    }
+    
+    return isValid;
+    
+  } catch (error) {
+    console.error('🔐 [Auth] Error validating session token:', error);
+    return false;
+  }
+};
+
+/**
+ * Check if session token exists and is valid with backend
+ * Replaces the simple hasValidSessionToken for critical operations
+ */
+export const hasValidAndAuthenticatedSession = async (sessionToken: string | null): Promise<boolean> => {
+  // First check if token exists
+  if (!hasValidSessionToken(sessionToken)) {
+    return false;
+  }
+  
+  // Then validate with backend
+  return await validateSessionToken(sessionToken!);
 }; 

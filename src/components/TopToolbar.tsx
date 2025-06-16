@@ -1,10 +1,30 @@
-import { Play, Settings, Edit3, Blocks, SidebarOpen, Terminal, Palette, LogIn, Moon, Sun, Link, ExternalLink } from 'lucide-react';
+import { 
+  Play, 
+  Settings, 
+  Edit3, 
+  Blocks, 
+  SidebarOpen, 
+  Terminal, 
+  Palette, 
+  LogIn, 
+  LogOut,
+  Moon, 
+  Sun, 
+  Link, 
+  ExternalLink,
+  CheckCircle,
+  AlertTriangle,
+  Loader2,
+  UserCheck,
+  RefreshCw
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAppContext } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useEffect, useState } from 'react';
-import { hasValidSessionToken, canEditWorkflow } from '@/utils/authUtils';
+import { hasValidSessionToken, canEditWorkflow, clearStoredAuth } from '@/utils/authUtils';
+import { useSessionValidation } from '@/hooks/useSessionValidation';
 import SessionLoginModal from '@/components/SessionLoginModal';
 import SessionStatus from '@/components/SessionStatus';
 import { CompactExtensionIndicator } from '@/components/ExtensionBanner';
@@ -20,14 +40,20 @@ export function TopToolbar() {
     workflowStatus,
     currentUserSessionToken,
     isCurrentUserOwner,
-    isCurrentWorkflowPublic
+    isCurrentWorkflowPublic,
+    authRefreshTrigger,
+    setCurrentUserSessionToken
   } = useAppContext();
   
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const [showLoginModal, setShowLoginModal] = useState(false);
   
-  const hasSessionToken = hasValidSessionToken(currentUserSessionToken);
+  // Use the new session validation hook for real-time authentication status
+  const { isValid: hasValidSession, isChecking: isValidatingSession, error: sessionError } = useSessionValidation(30000);
+  
+  // For backward compatibility, also check the stored token
+  const hasSessionToken = hasValidSessionToken(currentUserSessionToken) && hasValidSession;
   const isLegacyWorkflow = currentWorkflowData?.owner_id === null;
   const canEdit = canEditWorkflow(
     currentUserSessionToken, 
@@ -37,10 +63,88 @@ export function TopToolbar() {
   );
   const canExecute = hasSessionToken || isCurrentWorkflowPublic;
 
+  // Handle logout
+  const handleLogout = () => {
+    clearStoredAuth();
+    setCurrentUserSessionToken(null);
+    toast({
+      title: 'Logged Out',
+      description: 'You have been successfully logged out.',
+    });
+  };
+
+  // Dynamic Login Banner Component
+  const LoginStatusBanner = () => {
+    // Case 1: No session token at all
+    if (!currentUserSessionToken) {
+      return (
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={() => setShowLoginModal(true)}
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-base px-6 py-3 border-blue-200"
+        >
+          <LogIn className="w-5 h-5" />
+          Login
+        </Button>
+      );
+    }
+
+    // Case 2: Session is being validated
+    if (isValidatingSession) {
+      return (
+        <Button
+          variant="outline"
+          size="lg"
+          disabled
+          className="flex items-center gap-2 text-yellow-600 border-yellow-200 bg-yellow-50 text-base px-6 py-3"
+        >
+          <Loader2 className="w-5 h-5 animate-spin" />
+          Checking...
+        </Button>
+      );
+    }
+
+    // Case 3: Session is valid and authenticated - show nothing
+    if (hasValidSession && hasSessionToken) {
+      return null;
+    }
+
+    // Case 4: Session token exists but is invalid/expired
+    if (currentUserSessionToken && !hasValidSession) {
+      return (
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={() => setShowLoginModal(true)}
+          className="flex items-center gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200 bg-orange-50 text-base px-6 py-3"
+        >
+          <AlertTriangle className="w-5 h-5" />
+          Session Expired
+        </Button>
+      );
+    }
+
+    // Fallback
+    return (
+      <Button
+        variant="outline"
+        size="lg"
+        onClick={() => setShowLoginModal(true)}
+        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-base px-6 py-3"
+      >
+        <LogIn className="w-5 h-5" />
+        Login
+      </Button>
+    );
+  };
+
   // 🔍 Debug logging for authentication state
   console.log('🔍 [TopToolbar] Auth Debug:', {
     currentUserSessionToken: currentUserSessionToken ? `${currentUserSessionToken.slice(0,8)}...` : null,
     hasSessionToken,
+    hasValidSession,
+    isValidatingSession,
     isCurrentUserOwner,
     isCurrentWorkflowPublic,
     isLegacyWorkflow,
@@ -57,6 +161,20 @@ export function TopToolbar() {
   useEffect(() => {
     console.log("TopToolbar: currentWorkflowData changed to:", currentWorkflowData?.name || "null");
   }, [currentWorkflowData]);
+
+  // Track changes to authentication status
+  useEffect(() => {
+    console.log("TopToolbar: Authentication status changed:", {
+      hasValidSession,
+      hasSessionToken,
+      isValidatingSession
+    });
+  }, [hasValidSession, hasSessionToken, isValidatingSession]);
+
+  // Track authentication refresh trigger
+  useEffect(() => {
+    console.log("TopToolbar: Authentication refresh triggered:", authRefreshTrigger);
+  }, [authRefreshTrigger]);
 
   const handleRunWithInputs = () => {
     if (!canExecute) {
@@ -183,17 +301,7 @@ export function TopToolbar() {
               )}
             </Button>
             
-            {!hasSessionToken && (
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => setShowLoginModal(true)}
-                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-base px-6 py-3"
-              >
-                <LogIn className="w-5 h-5" />
-                Login
-              </Button>
-            )}
+            <LoginStatusBanner />
 
             <Button
               variant="outline"
@@ -208,10 +316,10 @@ export function TopToolbar() {
               title={!canExecute ? 'Login required to execute workflows' : ''}
             >
               <Play className="w-5 h-5" />
-              {!canExecute ? 'Login to Run' : 'Run with Inputs'}
+              {!canExecute ? 'Run' : 'Run'}
             </Button>
 
-            {/* tempolary disabled
+            {/* tempolary disabled Run as Tool
             <Button
               variant="outline"
               size="lg"

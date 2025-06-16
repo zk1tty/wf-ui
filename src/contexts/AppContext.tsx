@@ -12,7 +12,7 @@ import { workflowService } from '@/services/workflowService';
 // import { fetchWorkflowLogs, cancelWorkflow } from '@/services/pollingService';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { hasValidSessionToken } from '@/utils/authUtils';
+import { hasValidSessionToken, getStoredSessionToken } from '@/utils/authUtils';
 
 export type DisplayMode = 'canvas' | 'editor' | 'start';
 export type DialogType =
@@ -78,6 +78,8 @@ interface AppContextType {
   setCurrentWorkflowData: (workflow: Workflow | null, isPublic?: boolean) => void;
   setCurrentUserSessionToken: (sessionToken: string | null) => void;
   setIsCurrentUserOwner: (isOwner: boolean) => void;
+  refreshAuthenticationStatus: () => void;
+  authRefreshTrigger: number;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -93,7 +95,22 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [currentWorkflowData, setCurrentWorkflowDataState] =
     useState<Workflow | null>(null);
   const [isCurrentWorkflowPublic, setIsCurrentWorkflowPublic] = useState<boolean>(false);
-  const [currentUserSessionToken, setCurrentUserSessionToken] = useState<string | null>(null);
+  
+  // Initialize with any existing session token from storage
+  const [currentUserSessionToken, setCurrentUserSessionToken] = useState<string | null>(() => {
+    try {
+      const storedToken = getStoredSessionToken();
+      if (storedToken) {
+        console.log('🔐 [AppContext] Initializing with stored session token');
+        return storedToken;
+      }
+      return null;
+    } catch (error) {
+      console.error('🔐 [AppContext] Error loading initial session token:', error);
+      return null;
+    }
+  });
+  
   const [isCurrentUserOwner, setIsCurrentUserOwner] = useState<boolean>(false);
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus>('idle');
   const [workflowError, setWorkflowError] = useState<string | null>(null);
@@ -107,14 +124,21 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [recordingStatus, setRecordingStatus] =
     useState<RecordingStatus>('idle');
   const [recordingData, setRecordingData] = useState<any>(null);
+  const [authRefreshTrigger, setAuthRefreshTrigger] = useState<number>(0);
+
+  // Log initial session token status
+  useEffect(() => {
+    console.log('🔐 [AppContext] Initial session token status:', {
+      hasToken: !!currentUserSessionToken,
+      tokenPreview: currentUserSessionToken ? `${currentUserSessionToken.slice(0,8)}...` : null
+    });
+  }, []); // Only run once on mount
 
   // Wrapper function to handle both workflow data and public flag
   const setCurrentWorkflowData = useCallback((workflow: Workflow | null, isPublic: boolean = false) => {
     setCurrentWorkflowDataState(workflow);
     setIsCurrentWorkflowPublic(isPublic);
   }, []);
-
-
 
   const checkForUnsavedChanges = useCallback(() => {
     if (recordingStatus === 'recording') {
@@ -372,6 +396,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     fetchWorkflows();
   }, []);
 
+  const refreshAuthenticationStatus = useCallback(() => {
+    console.log('🔄 [AppContext] Refreshing authentication status across all components');
+    // Trigger a re-render of all components that depend on authentication state
+    setAuthRefreshTrigger(prev => prev + 1);
+    
+    // Also trigger a small delay to ensure state has propagated
+    setTimeout(() => {
+      console.log('🔄 [AppContext] Authentication refresh completed');
+    }, 100);
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -410,7 +445,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         setSidebarStatus,
         setCurrentWorkflowData,
         setCurrentUserSessionToken,
-        setIsCurrentUserOwner
+        setIsCurrentUserOwner,
+        refreshAuthenticationStatus,
+        authRefreshTrigger
       }}
     >
       {children}
