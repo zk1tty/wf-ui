@@ -1,4 +1,4 @@
-import { Workflow as WorkflowIcon, Trash2 } from 'lucide-react';
+import { Workflow as WorkflowIcon, Trash2, Footprints } from 'lucide-react';
 import { SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -102,7 +102,7 @@ export function WorkflowItem({
               <span className={`text-xs font-medium ${
                 theme === 'dark' ? 'text-cyan-400' : 'text-purple-600'
               }`}>
-                {workflow.steps?.length ?? 0} steps
+                {workflow.steps?.length ?? 0} <Footprints className="w-3.5 h-3.5" />
               </span>
               {getWorkflowTimestamp() && (
                 <span className={`text-xs ${

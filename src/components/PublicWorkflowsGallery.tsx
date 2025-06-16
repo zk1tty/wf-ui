@@ -2,7 +2,7 @@ import React from 'react';
 import { usePublicWorkflows } from '@/hooks/usePublicWorkflows';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Globe, Clock, User, Loader2, Palette} from 'lucide-react';
+import { Globe, Clock, User, Loader2, Palette, Footprints } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -177,10 +177,11 @@ export const PublicWorkflowsGallery = () => {
 
                     {/* Steps Count */}
                     {workflow.steps && (
-                      <div className={`text-sm ${
+                      <div className={`text-sm flex items-center space-x-1 ${
                         theme === 'dark' ? 'text-white' : 'text-gray-600'
                       }`}>
-                        <span className="font-medium">{workflow.steps.length}</span> steps
+                        <span className="font-medium">{workflow.steps.length}</span>
+                        <Footprints className="w-3 h-3" />
                       </div>
                     )}
 
@@ -195,7 +196,7 @@ export const PublicWorkflowsGallery = () => {
                         window.location.href = `/wf/${workflow.id}`;
                       }}
                     >
-                      View Workflow
+                      View
                     </Button>
                   </div>
                 </CardContent>
