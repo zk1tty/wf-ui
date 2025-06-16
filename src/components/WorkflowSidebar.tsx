@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Globe, Search, Plus, Loader, Workflow, HelpCircle, MessageCircle, ExternalLink } from 'lucide-react';
+import { Globe, Search, Plus, Loader, Workflow, HelpCircle, MessageCircle, ExternalLink, MessageSquare } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -318,7 +318,7 @@ export function WorkflowSidebar() {
                   ? 'bg-cyan-600 hover:bg-cyan-700' 
                   : 'bg-purple-600 hover:bg-purple-700'
               }`}
-              title={state === 'collapsed' ? 'Record New Workflow' : ''}
+              title={state === 'collapsed' ? 'Prompt New Workflow' : ''}
             >
               {recordingStatus === 'recording' ? (
                 <>
@@ -327,8 +327,8 @@ export function WorkflowSidebar() {
                 </>
               ) : (
                 <>
-                  <Plus className={`${state === 'collapsed' ? 'w-5 h-5' : 'w-4 h-4'} ${state !== 'collapsed' ? 'mr-2' : ''}`} />
-                  {state !== 'collapsed' && 'Record New Workflow'}
+                  <MessageSquare className={`${state === 'collapsed' ? 'w-5 h-5' : 'w-4 h-4'} ${state !== 'collapsed' ? 'mr-2' : ''}`} />
+                  {state !== 'collapsed' && 'Prompt New Workflow'}
                 </>
               )}
             </Button>
