@@ -37,6 +37,8 @@ export default function ProcessingPage() {
       
       const status = await apiFetch<JobStatus>(`/workflows/upload/${id}/status`, { auth: false });
       console.log('🔍 [ProcessingPage] Received status:', status);
+      console.log('🔍 [ProcessingPage] Progress value:', status.progress);
+      console.log('🔍 [ProcessingPage] Full response:', JSON.stringify(status, null, 2));
       
       setJobStatus(status);
       setIsLoading(false);
@@ -54,6 +56,7 @@ export default function ProcessingPage() {
         setError(status.error || 'Processing failed');
       } else if (status.status === 'processing' || status.status === 'pending') {
         console.log('🔍 [ProcessingPage] Job still processing, will poll again in 2s');
+        console.log('🔍 [ProcessingPage] Current progress:', status.progress);
         // Continue polling
         setTimeout(() => pollJobStatus(id), 2000);
       }

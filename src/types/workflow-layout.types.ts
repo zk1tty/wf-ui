@@ -28,6 +28,8 @@ export const stepSchema = z.object({
     'key_press',
     'scroll',
     'extract_page_content',
+    'clipboard_copy',
+    'clipboard_paste',
   ]),
 
   /* optional fields (vary by step type) */
