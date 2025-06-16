@@ -199,7 +199,7 @@ export function EditRecordingDialog({
               theme === 'dark' ? 'text-white' : 'text-black'
             }`}>
               <MessageSquare className="w-6 h-6" />
-              Prompt New Workflow
+              Prompt Workflow
             </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-8 h-full overflow-hidden">
