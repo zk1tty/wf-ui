@@ -2,11 +2,12 @@ import React from 'react';
 import { usePublicWorkflows } from '@/hooks/usePublicWorkflows';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Globe, Clock, User, Loader2, Palette, Footprints } from 'lucide-react';
+import { Globe, Clock, User, Loader2, Palette, Footprints, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { checkWorkflowOwnership, hasValidSessionToken } from '@/utils/authUtils';
+import '@/styles/brainAnimation.css';
 
 export const PublicWorkflowsGallery = () => {
   const { rows: workflows, loading, error } = usePublicWorkflows();
@@ -46,14 +47,44 @@ export const PublicWorkflowsGallery = () => {
   if (loading) {
     return (
       <div className={`flex flex-col items-center justify-center min-h-screen p-8 ${theme === 'dark' ? 'bg-black' : 'bg-white'}`}>
-        <Loader2 className={`w-8 h-8 animate-spin mb-4 ${
-          theme === 'dark' ? 'text-cyan-400' : 'text-purple-600'
-        }`} />
-        <p className={`text-lg ${
-          theme === 'dark' ? 'text-cyan-300' : 'text-gray-600'
+        {/* App Logo */}
+        <div className="flex justify-center mb-6">
+          <Brain className={`w-16 h-16 brain-animation ${
+            theme === 'dark' ? 'text-cyan-400' : 'text-purple-600'
+          }`} />
+        </div>
+
+        {/* App Title */}
+        <h1 className={`text-2xl font-bold mb-6 ${
+          theme === 'dark' ? 'text-white' : 'text-gray-900'
         }`}>
-          Loading public workflows...
-        </p>
+          Workflow Gallery
+        </h1>
+
+        {/* Loading Spinner and Text */}
+        <div className="flex items-center space-x-3">
+          <Loader2 className={`w-5 h-5 animate-spin ${
+            theme === 'dark' ? 'text-cyan-400' : 'text-purple-600'
+          }`} />
+          <p className={`text-lg ${
+            theme === 'dark' ? 'text-cyan-300' : 'text-gray-600'
+          }`}>
+            Loading public workflows...
+          </p>
+        </div>
+
+        {/* Loading Progress Indicator */}
+        <div className="mt-8 flex space-x-1">
+          <div className={`w-2 h-2 rounded-full animate-bounce ${
+            theme === 'dark' ? 'bg-cyan-400' : 'bg-purple-600'
+          }`} style={{ animationDelay: '0ms' }} />
+          <div className={`w-2 h-2 rounded-full animate-bounce ${
+            theme === 'dark' ? 'bg-cyan-400' : 'bg-purple-600'
+          }`} style={{ animationDelay: '150ms' }} />
+          <div className={`w-2 h-2 rounded-full animate-bounce ${
+            theme === 'dark' ? 'bg-cyan-400' : 'bg-purple-600'
+          }`} style={{ animationDelay: '300ms' }} />
+        </div>
       </div>
     );
   }
