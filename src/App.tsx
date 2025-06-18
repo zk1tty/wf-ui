@@ -10,6 +10,7 @@ import WorkflowLoader from './pages/WorkflowLoader';
 import ProcessingPage from './pages/ProcessingPage.tsx';
 import NotFound from './pages/NotFound';
 import { useExtensionIntegration } from './hooks/useExtensionIntegration';
+import { Analytics } from "@vercel/analytics/next";
 
 const queryClient = new QueryClient();
 
