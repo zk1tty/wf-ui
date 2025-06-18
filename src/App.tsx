@@ -50,11 +50,11 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
-            <Analytics />
           </ExtensionIntegrationWrapper>
         </AppProvider>
       </ThemeProvider>
     </TooltipProvider>
+    <Analytics />
   </QueryClientProvider>
 );
 
