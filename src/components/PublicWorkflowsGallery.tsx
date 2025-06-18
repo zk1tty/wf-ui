@@ -142,7 +142,7 @@ export const PublicWorkflowsGallery = () => {
           <h1 className={`text-4xl font-bold mb-4 ${
             theme === 'dark' ? 'text-cyan-300' : 'text-gray-800'
           }`}>
-            <Palette className={`inline-block w-10 h-10 mr-3 ${
+            <Brain className={`inline-block w-10 h-10 mr-3 ${
               theme === 'dark' ? 'text-cyan-400' : 'text-purple-600'
             }`} />
             Workflow Gallery
