@@ -20,7 +20,8 @@ export interface WorkflowService {
   executeWorkflow(
     workflowId: string,
     inputFields: z.infer<typeof inputFieldSchema>[],
-    sessionToken?: string
+    sessionToken?: string,
+    mode?: 'cloud-run' | 'local-run'
   ): Promise<{
     task_id: string;
     log_position: number;
@@ -303,7 +304,8 @@ class WorkflowServiceImpl implements WorkflowService {
   async executeWorkflow(
     workflowId: string,
     inputFields: z.infer<typeof inputFieldSchema>[],
-    sessionToken?: string
+    sessionToken?: string,
+    mode: 'cloud-run' | 'local-run' = 'cloud-run'
   ): Promise<{
     task_id: string;
     log_position: number;
@@ -325,7 +327,8 @@ class WorkflowServiceImpl implements WorkflowService {
           method: 'POST',
           body: JSON.stringify({
             inputs,
-            session_token: sessionToken
+            session_token: sessionToken,
+            mode: mode
           }),
           auth: false
         });

@@ -60,7 +60,8 @@ interface AppContextType {
   setActiveDialog: (dialog: DialogType) => void;
   executeWorkflow: (
     workflowId: string,
-    inputFields: z.infer<typeof inputFieldSchema>[]
+    inputFields: z.infer<typeof inputFieldSchema>[],
+    mode?: 'cloud-run' | 'local-run'
   ) => Promise<void>;
   updateWorkflowUI: (oldWorkflow: Workflow, newWorkflow: Workflow) => void;
   startPollingLogs: (taskId: string) => void;
@@ -299,7 +300,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   const executeWorkflow = useCallback(
-    async (workflowId: string, inputFields: z.infer<typeof inputFieldSchema>[]) => {
+    async (workflowId: string, inputFields: z.infer<typeof inputFieldSchema>[], mode: 'cloud-run' | 'local-run' = 'cloud-run') => {
       if (!workflowId) return;
       const missingInputs = inputFields.filter(
         (field) => field.required && !field.value
@@ -326,11 +327,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setWorkflowStatus('idle');
 
       try {
-        // Use session token for execution
+        // Use session token for execution with mode
         const result = await workflowService.executeWorkflow(
           workflowId, 
           inputFields, 
-          currentUserSessionToken!  // We've already validated it's not null above
+          currentUserSessionToken!,  // We've already validated it's not null above
+          mode
         );
         setCurrentTaskId(result.task_id);
         setLogPosition(result.log_position);
