@@ -8,10 +8,32 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    proxy: {
+      // Proxy API calls to backend to avoid CORS issues
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false,
+        ws: false, // Don't proxy WebSocket connections through this route
+      },
+      // Proxy workflow-related calls to backend
+      '/workflows': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false,
+        ws: true, // Enable WebSocket proxying for DevTools
+      },
+    },
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+  },
+  define: {
+    // Use localhost for API URL when using proxy (proxy will route to backend)
+    'import.meta.env.VITE_PUBLIC_API_URL': JSON.stringify(
+      process.env.VITE_PUBLIC_API_URL || 'http://localhost:5173'
+    ),
   },
 });
