@@ -23,10 +23,11 @@ export interface ExtensionMessage {
  * Detect if running in Chrome extension context
  */
 export const detectExtensionContext = (): ExtensionContext => {
-  const isExtension = typeof (globalThis as any).chrome !== 'undefined' && 
-                     !!(globalThis as any).chrome.runtime;
+  // Check if Chrome APIs exist
+  const hasChromeRuntime = typeof (globalThis as any).chrome !== 'undefined' && 
+                           !!(globalThis as any).chrome.runtime;
   
-  if (!isExtension) {
+  if (!hasChromeRuntime) {
     return {
       isExtension: false,
       hasTabsPermission: false,
@@ -36,10 +37,20 @@ export const detectExtensionContext = (): ExtensionContext => {
 
   const chrome = (globalThis as any).chrome;
   
+  // Check if we're actually IN an extension (not just a webpage with Chrome APIs)
+  // Extensions have chrome.runtime.id, regular webpages don't
+  const isActuallyInExtension = !!(chrome.runtime?.id);
+  
+  // Check if we're on an extension page (chrome-extension:// protocol)
+  const isExtensionPage = window.location.protocol === 'chrome-extension:';
+  
+  // We're in extension context if we have an extension ID OR we're on an extension page
+  const isExtension = isActuallyInExtension || isExtensionPage;
+  
   return {
-    isExtension: true,
-    hasTabsPermission: !!(chrome.tabs && chrome.tabs.create),
-    hasStoragePermission: !!(chrome.storage && chrome.storage.local),
+    isExtension,
+    hasTabsPermission: isExtension && !!(chrome.tabs && chrome.tabs.create),
+    hasStoragePermission: isExtension && !!(chrome.storage && chrome.storage.local),
     extensionId: chrome.runtime?.id,
     version: chrome.runtime?.getManifest?.()?.version
   };
@@ -113,19 +124,28 @@ export const sendMessageToExtension = async (message: ExtensionMessage): Promise
   const context = detectExtensionContext();
   
   if (!context.isExtension) {
-    console.warn('🔧 [Extension] Cannot send message - not in extension context');
+    console.log('🔧 [Extension] Skipping message - not in extension context (this is normal for web app)');
     return null;
   }
 
   try {
     const chrome = (globalThis as any).chrome;
+    
+    // Additional safety check - ensure we have a valid runtime
+    if (!chrome.runtime || !chrome.runtime.sendMessage) {
+      console.warn('🔧 [Extension] Chrome runtime.sendMessage not available');
+      return null;
+    }
+    
     const response = await chrome.runtime.sendMessage(message);
     console.log('🔧 [Extension] Message sent:', message.type, 'Response:', response);
     return response;
-  } catch (error) {
-    console.error('🔧 [Extension] Failed to send message:', error);
-    return null;
-  }
+      } catch (error) {
+      // Don't log as error since this is expected when running as webapp
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log('🔧 [Extension] Message sending failed (expected for web app):', errorMessage);
+      return null;
+    }
 };
 
 /**
@@ -222,13 +242,18 @@ export const handleExtensionNavigation = async (path: string): Promise<void> => 
 export const initializeExtensionIntegration = async (): Promise<ExtensionContext> => {
   const context = detectExtensionContext();
   
-  console.log('🔧 [Extension] Initializing extension integration:', context);
+  console.log('🔧 [Extension] Initializing extension integration:', {
+    isExtension: context.isExtension,
+    hasTabsPermission: context.hasTabsPermission,
+    hasStoragePermission: context.hasStoragePermission,
+    extensionId: context.extensionId ? `${context.extensionId.slice(0, 8)}...` : 'none'
+  });
   
   if (context.isExtension) {
     // Mark as from extension
     markFromExtension();
     
-    // Send initialization message to extension
+    // Send initialization message to extension (will gracefully fail if not in extension)
     await sendMessageToExtension({
       type: 'WEB_APP_INITIALIZED',
       data: {
@@ -236,6 +261,10 @@ export const initializeExtensionIntegration = async (): Promise<ExtensionContext
         timestamp: Date.now()
       }
     });
+    
+    console.log('🔧 [Extension] Extension integration initialized successfully');
+  } else {
+    console.log('🔧 [Extension] Running as web application (no extension integration)');
   }
   
   return context;
