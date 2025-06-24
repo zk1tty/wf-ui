@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useAppContext } from '@/contexts/AppContext';
-import { Play, Loader2, ShieldCheck, AlertTriangle, Cloud, Monitor, Copy, Check } from 'lucide-react';
+import { Play, Loader2, ShieldCheck, AlertTriangle, Cloud, Monitor, Copy, Check, Eye } from 'lucide-react';
 import { hasValidSessionToken } from '@/utils/authUtils';
 import SessionStatus from '@/components/SessionStatus';
 
@@ -38,6 +39,7 @@ export function RunWorkflowDialog() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [executionMode, setExecutionMode] = useState<'cloud-run' | 'local-run'>('cloud-run');
   const [copied, setCopied] = useState(false);
+  const [visualMode, setVisualMode] = useState(false);
   
   const hasSessionToken = hasValidSessionToken(currentUserSessionToken);
   const canExecute = hasSessionToken || isCurrentWorkflowPublic; // Can execute if authenticated OR if it's a public workflow
@@ -111,11 +113,21 @@ export function RunWorkflowDialog() {
         value: input.value,
       }));
 
-      const workflowId = currentWorkflowData!.id;
+      // Use workflow ID if available, otherwise fallback to name
+      const workflowId = currentWorkflowData!.id || currentWorkflowData!.name;
       if (!workflowId) {
-        throw new Error('Workflow ID not available');
+        throw new Error('Workflow ID or name not available');
       }
-      await executeWorkflow(workflowId, inputFields, executionMode);
+      
+      console.log('🚀 [RunWorkflowDialog] Executing workflow with parameters:', {
+        workflowId,
+        inputFields,
+        executionMode,
+        visualMode,
+        inputCount: inputFields.length
+      });
+      
+      await executeWorkflow(workflowId, inputFields, executionMode, visualMode);
       setActiveDialog(null);
     } catch (error) {
       console.error('Failed to execute workflow:', error);
@@ -234,12 +246,28 @@ export function RunWorkflowDialog() {
                     </div>
                 </div>
               )}
-            </div>
-          </div>
-          
-          <p className="text-gray-600">
-            Configure the input values for this workflow execution:
-          </p>
+                         </div>
+           </div>
+
+           {/* Visual Mode Toggle */}
+           <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+             <div className="flex items-center space-x-2">
+               <Eye className="h-4 w-4 text-gray-700" />
+               <div>
+                 <Label className="text-sm text-gray-900 font-medium">Visual Mode</Label>
+                 <p className="text-xs text-gray-600">Watch browser execution with rrweb streaming</p>
+               </div>
+             </div>
+             <Switch
+               checked={visualMode}
+               onCheckedChange={setVisualMode}
+               disabled={isExecuting}
+             />
+           </div>
+           
+           <p className="text-gray-600">
+             Configure the input values for this workflow execution:
+           </p>
 
           <div className="space-y-4">
             {inputs.map((input) => (
@@ -291,9 +319,11 @@ export function RunWorkflowDialog() {
             onClick={execute}
             disabled={isExecuting || workflowStatus === 'running' || !canExecute}
             className={`${
-              executionMode === 'cloud-run' 
-                ? 'bg-blue-600 hover:bg-blue-700' 
-                : 'bg-green-600 hover:bg-green-700'
+              visualMode
+                ? 'bg-purple-600 hover:bg-purple-700'
+                : executionMode === 'cloud-run' 
+                  ? 'bg-blue-600 hover:bg-blue-700' 
+                  : 'bg-green-600 hover:bg-green-700'
             } text-white flex items-center gap-2 disabled:opacity-50`}
           >
             {isExecuting ? (
@@ -308,12 +338,17 @@ export function RunWorkflowDialog() {
               </>
             ) : (
               <>
-                {executionMode === 'cloud-run' ? (
+                {visualMode ? (
+                  <Eye className="w-4 h-4" />
+                ) : executionMode === 'cloud-run' ? (
                   <Cloud className="w-4 h-4" />
                 ) : (
                   <Monitor className="w-4 h-4" />
                 )}
-                {executionMode === 'cloud-run' ? 'Cloud Run' : 'Local Run'}
+                {visualMode 
+                  ? `Visual ${executionMode === 'cloud-run' ? 'Cloud' : 'Local'} Run`
+                  : executionMode === 'cloud-run' ? 'Cloud Run' : 'Local Run'
+                }
               </>
             )}
           </Button>

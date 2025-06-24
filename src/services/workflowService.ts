@@ -21,11 +21,17 @@ export interface WorkflowService {
     workflowId: string,
     inputFields: z.infer<typeof inputFieldSchema>[],
     sessionToken?: string,
-    mode?: 'cloud-run' | 'local-run'
+    mode?: 'cloud-run' | 'local-run',
+    visual?: boolean
   ): Promise<{
+    success: boolean;
     task_id: string;
+    workflow: string;
     log_position: number;
     message: string;
+    mode: string;
+    devtools_url?: string;
+    visual_enabled?: boolean;
   }>;
   getWorkflowCategory(timestamp: number): string;
   addWorkflow(name: string, content: string): Promise<void>;
@@ -305,11 +311,19 @@ class WorkflowServiceImpl implements WorkflowService {
     workflowId: string,
     inputFields: z.infer<typeof inputFieldSchema>[],
     sessionToken?: string,
-    mode: 'cloud-run' | 'local-run' = 'cloud-run'
+    mode: 'cloud-run' | 'local-run' = 'cloud-run',
+    visual: boolean = false
   ): Promise<{
+    success: boolean;
     task_id: string;
+    workflow: string;
     log_position: number;
     message: string;
+    mode: string;
+    devtools_url?: string;
+    visual_enabled?: boolean;
+    visual_streaming_enabled?: boolean;
+    session_id?: string;
   }> {
     const inputs: any = {};
     inputFields.forEach((field) => {
@@ -319,17 +333,36 @@ class WorkflowServiceImpl implements WorkflowService {
     // Use session-based API if session token is provided
     if (sessionToken) {
       try {
+        // Use the existing session endpoint for both regular and visual execution
+        const endpoint = `/workflows/${workflowId}/execute/session`;
+        
+        const requestBody = {
+          inputs,
+          session_token: sessionToken,
+          mode: mode,
+          visual: visual,
+          // Add rrweb-specific parameters when visual mode is enabled
+          ...(visual && {
+            visual_streaming: true,
+            visual_quality: 'standard',
+            visual_events_buffer: 1000
+          })
+        };
+
         const data = await apiFetch<{
+          success: boolean;
           task_id: string;
+          workflow: string;
           log_position: number;
           message: string;
-        }>(`/workflows/${workflowId}/execute/session`, {
+          mode: string;
+          devtools_url?: string;
+          visual_enabled?: boolean;
+          visual_streaming_enabled?: boolean;
+          session_id?: string;
+        }>(endpoint, {
           method: 'POST',
-          body: JSON.stringify({
-            inputs,
-            session_token: sessionToken,
-            mode: mode
-          }),
+          body: JSON.stringify(requestBody),
           auth: false
         });
         

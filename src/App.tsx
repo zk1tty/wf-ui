@@ -9,6 +9,8 @@ import Index from './pages/Index';
 import WorkflowLoader from './pages/WorkflowLoader';
 import ProcessingPage from './pages/ProcessingPage.tsx';
 import NotFound from './pages/NotFound';
+import DevToolsViewer from './components/DevToolsViewer';
+import RRWebVisualizer from './components/RRWebVisualizer';
 import { useExtensionIntegration } from './hooks/useExtensionIntegration';
 import { Analytics } from "@vercel/analytics/react";
 
@@ -47,6 +49,8 @@ const App = () => (
                 <Route path="/workflows/:id" element={<WorkflowLoader />} />
                 <Route path="/wf/processing/:jobId" element={<ProcessingPage />} />
                 <Route path="/wf/:id" element={<WorkflowLoader />} />
+                <Route path="/devtools/:taskId" element={<DevToolsViewer />} />
+                <Route path="/visual/:sessionId" element={<RRWebVisualizer />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
