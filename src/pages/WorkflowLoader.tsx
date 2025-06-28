@@ -5,9 +5,9 @@ import { useAppContext } from "@/contexts/AppContext";
 import { workflowService } from "@/services/workflowService";
 import { checkWorkflowOwnership, getStoredSessionToken, isFromExtension, hasValidSessionToken } from "@/utils/authUtils";
 
-/** grabs /workflows/:id or /wf/:id, feeds it into context then shows the rest of the app */
+/** grabs /workflows/:name or /wf/:id, feeds it into context then shows the rest of the app */
 export default function WorkflowLoader() {
-  const { id } = useParams();                 // uuid from the URL
+  const { id, name } = useParams();          // id from /wf/:id route, name from /workflows/:name route  
   const nav      = useNavigate();
   const location = useLocation();
   const { 
@@ -22,13 +22,19 @@ export default function WorkflowLoader() {
     setIsCurrentUserOwner
   } = useAppContext();
 
-  // Determine if this is a public workflow based on the route
+  // Determine route type and get the correct parameter
   const isPublicWorkflow = location.pathname.startsWith('/wf/');
+  const workflowIdentifier = isPublicWorkflow ? id : name; // Use id for public, name for private
 
   useEffect(() => {
     (async () => {
       try {
         setSidebarStatus('loading');
+        
+        // Validate that we have the required parameter
+        if (!workflowIdentifier) {
+          throw new Error(`Missing ${isPublicWorkflow ? 'workflow ID' : 'workflow name'} parameter`);
+        }
         
         // Check for session token and authentication state
         const sessionToken = getStoredSessionToken();
@@ -43,7 +49,7 @@ export default function WorkflowLoader() {
         let wf: any;
         if (isPublicWorkflow) {
           // Load public workflow by ID
-          wf = await workflowService.getPublicWorkflowById(id!);
+          wf = await workflowService.getPublicWorkflowById(workflowIdentifier);
           console.log("📄 [WorkflowLoader] Public workflow loaded:", wf.name || wf.id, "steps:", wf.steps?.length);
           console.log("📄 [WorkflowLoader] Workflow data:", { id: wf.id, owner_id: wf.owner_id, name: wf.name });
           
@@ -64,8 +70,8 @@ export default function WorkflowLoader() {
           setDisplayMode('canvas');
           console.log("📄 [WorkflowLoader] Set currentWorkflowData to public workflow:", wf.name || wf.id);
         } else {
-          // Load private workflow by name (existing behavior)
-          const res = await workflowService.getWorkflowByName(id!);
+          // Load private workflow by name (legacy behavior)
+          const res = await workflowService.getWorkflowByName(workflowIdentifier);
           wf = typeof res === "string" ? JSON.parse(res) : res;
           console.log("📄 [WorkflowLoader] Private workflow loaded:", wf.name, "steps:", wf.steps?.length);
           
@@ -117,7 +123,7 @@ export default function WorkflowLoader() {
         nav("/404", { replace: true });
       }
     })();
-  }, [id, isPublicWorkflow]);
+  }, [workflowIdentifier, isPublicWorkflow]);
 
   return (
     <div className="p-10 text-gray-500">
