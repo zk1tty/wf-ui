@@ -11,14 +11,14 @@ export default defineConfig({
     proxy: {
       // Proxy API calls to backend to avoid CORS issues
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
         ws: false, // Don't proxy WebSocket connections through this route
       },
       // Proxy workflow-related calls to backend
       '/workflows': {
-        target: 'http://127.0.0.1:8000',
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
         ws: true, // Enable WebSocket proxying for DevTools
