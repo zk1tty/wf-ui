@@ -1,4 +1,5 @@
 import { API_ENDPOINTS } from '@/lib/constants';
+import { getRRWebReplayerConfig, RRWEB_LIVE_CONFIG, WORKFLOW_VISUALIZER_CONFIG } from '@/lib/rrweb-config';
 
 // Simple RRWeb event type (no complex viewport management)
 type RRWebEvent = any;
@@ -43,14 +44,8 @@ export class WorkflowVisualizer {
 
   // Step 4: Simplified constructor - official rrweb stream pattern
   constructor(options: Partial<WorkflowVisualizerCallbacks> = {}) {
-    this.config = {
-      apiBase: '',
-      autoReconnect: false, // Simplified - no auto-reconnect complexity
-      reconnectInterval: 3000,
-      maxReconnectAttempts: 3,
-      bufferSize: 1000,
-      quality: 'standard'
-    };
+    // Use centralized configuration from rrweb-config.ts
+    this.config = { ...WORKFLOW_VISUALIZER_CONFIG };
     
     this.state = {
       isConnected: false,
@@ -325,7 +320,7 @@ export class WorkflowVisualizer {
     // Filter duplicate timestamp events to prevent rapid rebuild cycles
     if (event.timestamp === this.lastEventTimestamp) {
       this.duplicateEventCount++;
-      if (this.duplicateEventCount > 3) {
+      if (this.duplicateEventCount > RRWEB_LIVE_CONFIG.MAX_DUPLICATE_EVENTS) {
         console.warn('🔄 [WorkflowVisualizer] Skipping duplicate timestamp event to prevent media conflicts:', {
           timestamp: event.timestamp,
           duplicateCount: this.duplicateEventCount
@@ -942,26 +937,10 @@ export class WorkflowVisualizer {
         throw new Error('Cannot create replayer container - iframe document or body not available');
       }
 
-      // Official rrweb stream pattern - match backend recording configuration
-      this.state.replayer = new (iframeWindow as any).rrweb.Replayer([], {
-        root: replayerContainer,
-        UNSAFE_replayCanvas: true,
-        liveMode: true,
-        blockClass: 'rr-block',        // Match backend config
-        ignoreClass: 'rr-ignore',      // Match backend config  
-        maskTextClass: 'rr-mask',      // Match backend config
-        recordCanvas: true,            // ✅ MATCH backend: True
-        collectFonts: false,           // ✅ MATCH backend: False
-        // Media error handling to prevent AbortError issues
-        pauseAnimation: false,         // Don't pause animations that might cause media conflicts
-        skipInactive: false,           // Don't skip inactive periods to avoid rapid media state changes
-        speed: 1,                      // Consistent playback speed
-        loadTimeout: 10000,            // Longer timeout for media elements
-        showWarning: false,            // Suppress warnings that might relate to media loading
-        // Add media-specific error recovery
-        insertStyleRules: [],          // Avoid CSS conflicts with media elements
-        triggerFocus: false            // Avoid focus events that might trigger media play/pause
-      });
+      // Official rrweb stream pattern - using centralized configuration
+      this.state.replayer = new (iframeWindow as any).rrweb.Replayer([], 
+        getRRWebReplayerConfig(replayerContainer)
+      );
 
       // Step 2: Let rrweb handle CSS insertion internally (official pattern)
 
@@ -971,10 +950,9 @@ export class WorkflowVisualizer {
       this.setupReplayerEventListeners();
 
       // Official rrweb live mode pattern with buffer for smooth playback
-      const BUFFER_MS = 1000; // 1 second buffer to prevent timing issues
-      this.state.replayer.startLive(Date.now() - BUFFER_MS);
+      this.state.replayer.startLive(Date.now() - RRWEB_LIVE_CONFIG.BUFFER_MS);
       
-      console.log(`✅ [WorkflowVisualizer] RRWeb replayer started in live mode with ${BUFFER_MS}ms buffer`);
+      console.log(`✅ [WorkflowVisualizer] RRWeb replayer started in live mode with ${RRWEB_LIVE_CONFIG.BUFFER_MS}ms buffer`);
       
       // Step 3: Add error boundary for CSS insertion and media playback issues
       if (typeof (iframeWindow as any).addEventListener === 'function') {

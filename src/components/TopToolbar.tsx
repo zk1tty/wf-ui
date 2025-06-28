@@ -204,8 +204,9 @@ export function TopToolbar() {
   const handleShareWorkflow = async () => {
     if (!currentWorkflowData) return;
     
-    // Generate the workflow URL
-    const workflowUrl = isCurrentWorkflowPublic 
+    // Prefer modern /wf/{id} route for both public and private workflows when ID is available
+    // Fall back to legacy /workflows/{name} only for private workflows without IDs
+    const workflowUrl = currentWorkflowData.id 
       ? `${window.location.origin}/wf/${currentWorkflowData.id}`
       : `${window.location.origin}/workflows/${currentWorkflowData.name}`;
     
