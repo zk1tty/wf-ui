@@ -255,7 +255,7 @@ export function RunWorkflowDialog() {
                <Eye className="h-4 w-4 text-gray-700" />
                <div>
                  <Label className="text-sm text-gray-900 font-medium">Visual Mode</Label>
-                 <p className="text-xs text-gray-600">Watch browser execution with rrweb streaming</p>
+                 <p className="text-xs text-gray-600">Watch browser execution with streaming</p>
                </div>
              </div>
              <Switch

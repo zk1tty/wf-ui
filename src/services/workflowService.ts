@@ -127,8 +127,7 @@ class WorkflowServiceImpl implements WorkflowService {
       console.log('[workflowService] Fetching all public workflows to find ID:', id);
       
       const allWorkflows = await apiFetch<any[]>('/workflows/', { auth: false });
-      console.log('[workflowService] All public workflows:', allWorkflows);
-      
+            
       if (!Array.isArray(allWorkflows)) {
         throw new Error('Invalid response format: expected array of workflows');
       }
@@ -341,13 +340,22 @@ class WorkflowServiceImpl implements WorkflowService {
           session_token: sessionToken,
           mode: mode,
           visual: visual,
-          // Add rrweb-specific parameters when visual mode is enabled
+          // ✅ Re-enabled: Backend visual streaming is now working!
           ...(visual && {
             visual_streaming: true,
             visual_quality: 'standard',
             visual_events_buffer: 1000
           })
         };
+
+        console.log('📤 [WorkflowService] Sending execution request:', {
+          endpoint,
+          workflowId,
+          requestBody: {
+            ...requestBody,
+            session_token: sessionToken ? `${sessionToken.slice(0,8)}...` : null
+          }
+        });
 
         const data = await apiFetch<{
           success: boolean;
@@ -366,7 +374,16 @@ class WorkflowServiceImpl implements WorkflowService {
           auth: false
         });
         
-        console.log('Response from executeWorkflow (session-based):', data);
+        console.log('📥 [WorkflowService] Response from executeWorkflow (session-based):', {
+          success: data.success,
+          task_id: data.task_id,
+          workflow: data.workflow,
+          mode: data.mode,
+          visual_enabled: data.visual_enabled,
+          visual_streaming_enabled: data.visual_streaming_enabled,
+          session_id: data.session_id,
+          message: data.message
+        });
         return data;
       } catch (error) {
         console.error('Session-based executeWorkflow failed:', error);

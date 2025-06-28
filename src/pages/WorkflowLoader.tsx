@@ -30,22 +30,14 @@ export default function WorkflowLoader() {
       try {
         setSidebarStatus('loading');
         
-        // 🔐 Check for session token and authentication state
+        // Check for session token and authentication state
         const sessionToken = getStoredSessionToken();
         const fromExt = isFromExtension();
         
-        console.log('🔐 [WorkflowLoader] Auth check:', { 
-          hasSessionToken: !!sessionToken, 
-          fromExtension: fromExt,
-          isValid: hasValidSessionToken(sessionToken)
-        });
-        
         if (hasValidSessionToken(sessionToken)) {
           setCurrentUserSessionToken(sessionToken);
-          console.log('🔐 [WorkflowLoader] Valid session token found');
         } else {
           setCurrentUserSessionToken(null);
-          console.log('🔐 [WorkflowLoader] No valid session token found');
         }
         
         let wf: any;
@@ -58,20 +50,14 @@ export default function WorkflowLoader() {
           // Check ownership for public workflow
           if (hasValidSessionToken(sessionToken) && wf.id) {
             try {
-              console.log('🔐 [WorkflowLoader] Checking ownership for workflow ID:', wf.id, 'with session token:', sessionToken?.slice(0,8) + '...');
               const isOwner = await checkWorkflowOwnership(sessionToken!, wf.id);
               setIsCurrentUserOwner(isOwner);
-              console.log('🔐 [WorkflowLoader] ✅ Ownership check result:', isOwner);
-              console.log('🔐 [WorkflowLoader] ✅ setIsCurrentUserOwner called with:', isOwner);
             } catch (error) {
-              console.error('🔐 [WorkflowLoader] ❌ Ownership check failed:', error);
+              console.error('❌ [WorkflowLoader] Ownership check failed:', error);
               setIsCurrentUserOwner(false);
-              console.log('🔐 [WorkflowLoader] ❌ setIsCurrentUserOwner called with: false (due to error)');
             }
           } else {
             setIsCurrentUserOwner(false);
-            console.log('🔐 [WorkflowLoader] ❌ setIsCurrentUserOwner called with: false (no session token or workflow ID)');
-            console.log('🔐 [WorkflowLoader] ❌ Reason: hasValidSessionToken =', hasValidSessionToken(sessionToken), 'wf.id =', wf.id);
           }
           
           setCurrentWorkflowData(wf, true); // Mark as public
@@ -87,20 +73,33 @@ export default function WorkflowLoader() {
           // (Private workflows are typically accessed by their owners)
           if (hasValidSessionToken(sessionToken)) {
             setIsCurrentUserOwner(true);
-            console.log('🔐 [WorkflowLoader] Assuming ownership for private workflow');
           } else {
             setIsCurrentUserOwner(false);
           }
           
           // Fetch all workflows (existing behavior)
           const allWorkflows = await workflowService.getWorkflows();
-          const parsedWorkflows = allWorkflows.map((wf: any) => JSON.parse(wf));
+          const parsedWorkflows = allWorkflows.map((wf: any) => {
+            const workflow = typeof wf === "string" ? JSON.parse(wf) : wf;
+            // Convert to enhanced workflow format
+            return {
+              ...workflow,
+              execution_stats: undefined,
+              recent_executions: undefined,
+              performance: undefined
+            };
+          });
 
           // Add the current workflow if it's not already in the list
           const existingWf = parsedWorkflows.find(w => w.name === wf.name);
           console.log("📄 [WorkflowLoader] existingWf:", existingWf);
           if (!existingWf) {
-            parsedWorkflows.push(wf);
+            parsedWorkflows.push({
+              ...wf,
+              execution_stats: undefined,
+              recent_executions: undefined,
+              performance: undefined
+            });
           }
 
           // Update context with all workflows
