@@ -1,3 +1,14 @@
+/**
+ * LEGACY/FALLBACK COMPONENT - DevTools Iframe Integration
+ * 
+ * This component handles DevTools iframe embedding when RRWeb streaming is not supported.
+ * Core component used by DevToolsViewer for fallback browser automation viewing.
+ * 
+ * Primary Method: RRWebVisualizer with WorkflowVisualizer - Modern streaming approach
+ * Fallback Method: DevToolsIframe - Legacy iframe approach when streaming unavailable
+ * 
+ * Status: Active fallback system, provides backward compatibility
+ */
 import React, { useState, useEffect } from 'react';
 import { Loader2, AlertCircle, RefreshCw, Chrome } from 'lucide-react';
 

@@ -1,3 +1,14 @@
+/**
+ * LEGACY/FALLBACK COMPONENT - DevTools Browser Viewer
+ * 
+ * This component serves as a fallback when RRWeb streaming is not available.
+ * Used when: result.visual_enabled && result.devtools_url but no visual_streaming_enabled
+ * 
+ * Primary Method: RRWebVisualizer (/visual/:sessionId) - Full-width live streaming
+ * Fallback Method: DevToolsViewer (/devtools/:taskId) - Opens in new window when streaming fails
+ * 
+ * Status: Active fallback system, kept for reliability
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';

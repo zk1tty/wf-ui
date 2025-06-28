@@ -1,3 +1,14 @@
+/**
+ * LEGACY/FALLBACK HOOK - DevTools Status Management
+ * 
+ * This hook manages DevTools status polling for the legacy fallback system.
+ * Used by DevToolsStatus component when RRWeb streaming is not available.
+ * 
+ * Primary Method: WorkflowVisualizer stats - Built-in status management
+ * Fallback Method: useDevToolsStatus - Separate status polling for legacy viewer
+ * 
+ * Status: Active fallback system, provides status for DevTools components
+ */
 import { useState, useEffect, useCallback } from 'react';
 
 interface DevToolsStatus {

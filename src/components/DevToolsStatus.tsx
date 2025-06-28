@@ -1,3 +1,14 @@
+/**
+ * LEGACY/FALLBACK COMPONENT - DevTools Status Display
+ * 
+ * This component displays DevTools connection status for the legacy fallback system.
+ * Used within DevToolsViewer when RRWeb streaming is not available.
+ * 
+ * Primary Method: RRWebVisualizer top bar stats - Integrated live status display
+ * Fallback Method: DevToolsStatus - Separate status component for legacy viewer
+ * 
+ * Status: Active fallback system, supports legacy DevTools workflow
+ */
 import React from 'react';
 import { useDevToolsStatus } from '@/hooks/useDevToolsStatus';
 import { Badge } from '@/components/ui/badge';

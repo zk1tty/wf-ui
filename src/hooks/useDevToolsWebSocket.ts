@@ -1,4 +1,16 @@
+/**
+ * LEGACY/FALLBACK HOOK - DevTools WebSocket Management
+ * 
+ * This hook manages DevTools WebSocket connections for the legacy fallback system.
+ * Used by DevToolsViewer when RRWeb streaming is not available.
+ * 
+ * Primary Method: WorkflowVisualizer WebSocket - Built-in streaming connection  
+ * Fallback Method: useDevToolsWebSocket - Separate WebSocket for legacy DevTools
+ * 
+ * Status: Active fallback system, provides WebSocket management for DevTools components
+ */
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { WS_BASE_URL } from '@/lib/constants';
 
 interface DevToolsStatusMessage {
   type: "devtools_status";
@@ -60,18 +72,8 @@ export function useDevToolsWebSocket(sessionId: string): UseDevToolsWebSocketRes
       wsRef.current.close();
     }
 
-    // Connect to backend WebSocket endpoint
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    
-    // Determine the correct WebSocket URL based on environment
-    let wsUrl: string;
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      // Development: Connect directly to backend port
-      wsUrl = `${wsProtocol}//localhost:8000/workflows/devtools/${sessionId}`;
-    } else {
-      // Production: Use same host as frontend (assuming proxy setup)
-      wsUrl = `${wsProtocol}//${window.location.host}/workflows/devtools/${sessionId}`;
-    }
+    // Connect to backend WebSocket endpoint using constants
+    const wsUrl = `${WS_BASE_URL}/workflows/devtools/${sessionId}`;
     
     console.log(`🔌 [useDevToolsWebSocket] Connecting to: ${wsUrl}`);
     setConnectionStatus('connecting');
