@@ -16,7 +16,9 @@ import {
   AlertTriangle,
   Loader2,
   UserCheck,
-  RefreshCw
+  RefreshCw,
+  User,
+  BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -28,6 +30,7 @@ import { useSessionValidation } from '@/hooks/useSessionValidation';
 import SessionLoginModal from '@/components/SessionLoginModal';
 import SessionStatus from '@/components/SessionStatus';
 import { CompactExtensionIndicator } from '@/components/ExtensionBanner';
+import UserConsole from '@/components/UserConsole';
 import { useToast } from '@/hooks/use-toast';
 
 export function TopToolbar() {
@@ -48,6 +51,7 @@ export function TopToolbar() {
   const { theme, toggleTheme } = useTheme();
   const { toast } = useToast();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showUserConsole, setShowUserConsole] = useState(false);
   
   // Use the new session validation hook for real-time authentication status
   const { isValid: hasValidSession, isChecking: isValidatingSession, error: sessionError } = useSessionValidation(30000);
@@ -139,42 +143,17 @@ export function TopToolbar() {
     );
   };
 
-  // 🔍 Debug logging for authentication state
-  console.log('🔍 [TopToolbar] Auth Debug:', {
-    currentUserSessionToken: currentUserSessionToken ? `${currentUserSessionToken.slice(0,8)}...` : null,
-    hasSessionToken,
-    hasValidSession,
-    isValidatingSession,
-    isCurrentUserOwner,
-    isCurrentWorkflowPublic,
-    isLegacyWorkflow,
-    canEdit,
-    canExecute,
-    workflowName: currentWorkflowData?.name,
-    workflowOwnerId: currentWorkflowData?.owner_id
-  });
 
-  // Debug log to see if currentWorkflowData is updating
-  console.log("TopToolbar: currentWorkflowData:", currentWorkflowData?.name || "null");
 
-  // Track changes to currentWorkflowData
+  // Listen for custom event to open user console
   useEffect(() => {
-    console.log("TopToolbar: currentWorkflowData changed to:", currentWorkflowData?.name || "null");
-  }, [currentWorkflowData]);
-
-  // Track changes to authentication status
-  useEffect(() => {
-    console.log("TopToolbar: Authentication status changed:", {
-      hasValidSession,
-      hasSessionToken,
-      isValidatingSession
-    });
-  }, [hasValidSession, hasSessionToken, isValidatingSession]);
-
-  // Track authentication refresh trigger
-  useEffect(() => {
-    console.log("TopToolbar: Authentication refresh triggered:", authRefreshTrigger);
-  }, [authRefreshTrigger]);
+    const handleOpenUserConsole = () => {
+      setShowUserConsole(true);
+    };
+    
+    window.addEventListener('openUserConsole', handleOpenUserConsole);
+    return () => window.removeEventListener('openUserConsole', handleOpenUserConsole);
+  }, []);
 
   const handleRunWithInputs = () => {
     if (!canExecute) {
@@ -286,6 +265,23 @@ export function TopToolbar() {
             {/* Chrome Extension Indicator */}
             <CompactExtensionIndicator />
             
+            {/* User Console Button - Only show if logged in */}
+            {hasSessionToken && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowUserConsole(true)}
+                className={`flex items-center gap-2 ${
+                  theme === 'dark' 
+                    ? 'text-cyan-400 hover:text-cyan-300 hover:bg-gray-800 border-gray-600' 
+                    : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50'
+                }`}
+                title="Open Analytics"
+              >
+                <BarChart3 className="w-4 h-4" />
+              </Button>
+            )}
+
             {/* Dark Mode Toggle */}
             <Button
               variant="outline"
@@ -375,6 +371,15 @@ export function TopToolbar() {
         open={showLoginModal} 
         onOpenChange={setShowLoginModal} 
       />
+
+      {/* User Console Modal */}
+      {showUserConsole && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="w-full h-full max-w-none bg-white dark:bg-gray-900 rounded-lg overflow-hidden">
+            <UserConsole onClose={() => setShowUserConsole(false)} />
+          </div>
+        </div>
+      )}
     </>
   );
 }

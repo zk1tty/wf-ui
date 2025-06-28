@@ -63,7 +63,7 @@ export const isFromExtension = (): boolean => {
   try {
     return sessionStorage.getItem('from_extension') === 'true';
   } catch (error) {
-    console.error('🔧 [Extension] Error checking extension origin:', error);
+    console.error('❌ [Extension] Error checking extension origin:', error);
     return false;
   }
 };
@@ -74,9 +74,8 @@ export const isFromExtension = (): boolean => {
 export const markFromExtension = (): void => {
   try {
     sessionStorage.setItem('from_extension', 'true');
-    console.log('🔧 [Extension] Marked user as from extension');
   } catch (error) {
-    console.error('🔧 [Extension] Error marking extension origin:', error);
+    console.error('❌ [Extension] Error marking extension origin:', error);
   }
 };
 
@@ -86,9 +85,8 @@ export const markFromExtension = (): void => {
 export const clearExtensionOrigin = (): void => {
   try {
     sessionStorage.removeItem('from_extension');
-    console.log('🔧 [Extension] Cleared extension origin flag');
   } catch (error) {
-    console.error('🔧 [Extension] Error clearing extension origin:', error);
+    console.error('❌ [Extension] Error clearing extension origin:', error);
   }
 };
 
@@ -99,7 +97,6 @@ export const openInNewTab = async (url: string, active: boolean = true): Promise
   const context = detectExtensionContext();
   
   if (!context.isExtension || !context.hasTabsPermission) {
-    console.warn('🔧 [Extension] Cannot open new tab - not in extension context or missing permissions');
     return false;
   }
 
@@ -109,10 +106,9 @@ export const openInNewTab = async (url: string, active: boolean = true): Promise
       url: url.startsWith('http') ? url : `${window.location.origin}${url}`,
       active
     });
-    console.log('🔧 [Extension] Opened new tab:', url);
     return true;
   } catch (error) {
-    console.error('🔧 [Extension] Failed to open new tab:', error);
+    console.error('❌ [Extension] Failed to open new tab:', error);
     return false;
   }
 };
@@ -124,7 +120,6 @@ export const sendMessageToExtension = async (message: ExtensionMessage): Promise
   const context = detectExtensionContext();
   
   if (!context.isExtension) {
-    console.log('🔧 [Extension] Skipping message - not in extension context (this is normal for web app)');
     return null;
   }
 
@@ -133,17 +128,13 @@ export const sendMessageToExtension = async (message: ExtensionMessage): Promise
     
     // Additional safety check - ensure we have a valid runtime
     if (!chrome.runtime || !chrome.runtime.sendMessage) {
-      console.warn('🔧 [Extension] Chrome runtime.sendMessage not available');
       return null;
     }
     
     const response = await chrome.runtime.sendMessage(message);
-    console.log('🔧 [Extension] Message sent:', message.type, 'Response:', response);
     return response;
       } catch (error) {
       // Don't log as error since this is expected when running as webapp
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.log('🔧 [Extension] Message sending failed (expected for web app):', errorMessage);
       return null;
     }
 };
@@ -157,19 +148,15 @@ export const listenForExtensionMessages = (
   const context = detectExtensionContext();
   
   if (!context.isExtension) {
-    console.warn('🔧 [Extension] Cannot listen for messages - not in extension context');
     return () => {};
   }
 
   const chrome = (globalThis as any).chrome;
   chrome.runtime.onMessage.addListener(callback);
   
-  console.log('🔧 [Extension] Started listening for extension messages');
-  
   // Return cleanup function
   return () => {
     chrome.runtime.onMessage.removeListener(callback);
-    console.log('🔧 [Extension] Stopped listening for extension messages');
   };
 };
 
@@ -180,17 +167,15 @@ export const getExtensionStorage = async (keys: string | string[]): Promise<any>
   const context = detectExtensionContext();
   
   if (!context.isExtension || !context.hasStoragePermission) {
-    console.warn('🔧 [Extension] Cannot access storage - not in extension context or missing permissions');
     return null;
   }
 
   try {
     const chrome = (globalThis as any).chrome;
     const result = await chrome.storage.local.get(keys);
-    console.log('🔧 [Extension] Retrieved storage:', keys, result);
     return result;
   } catch (error) {
-    console.error('🔧 [Extension] Failed to get storage:', error);
+    console.error('❌ [Extension] Failed to get storage:', error);
     return null;
   }
 };
@@ -202,17 +187,15 @@ export const setExtensionStorage = async (data: Record<string, any>): Promise<bo
   const context = detectExtensionContext();
   
   if (!context.isExtension || !context.hasStoragePermission) {
-    console.warn('🔧 [Extension] Cannot set storage - not in extension context or missing permissions');
     return false;
   }
 
   try {
     const chrome = (globalThis as any).chrome;
     await chrome.storage.local.set(data);
-    console.log('🔧 [Extension] Set storage:', data);
     return true;
   } catch (error) {
-    console.error('🔧 [Extension] Failed to set storage:', error);
+    console.error('❌ [Extension] Failed to set storage:', error);
     return false;
   }
 };
@@ -242,13 +225,6 @@ export const handleExtensionNavigation = async (path: string): Promise<void> => 
 export const initializeExtensionIntegration = async (): Promise<ExtensionContext> => {
   const context = detectExtensionContext();
   
-  console.log('🔧 [Extension] Initializing extension integration:', {
-    isExtension: context.isExtension,
-    hasTabsPermission: context.hasTabsPermission,
-    hasStoragePermission: context.hasStoragePermission,
-    extensionId: context.extensionId ? `${context.extensionId.slice(0, 8)}...` : 'none'
-  });
-  
   if (context.isExtension) {
     // Mark as from extension
     markFromExtension();
@@ -261,10 +237,6 @@ export const initializeExtensionIntegration = async (): Promise<ExtensionContext
         timestamp: Date.now()
       }
     });
-    
-    console.log('🔧 [Extension] Extension integration initialized successfully');
-  } else {
-    console.log('🔧 [Extension] Running as web application (no extension integration)');
   }
   
   return context;
@@ -275,5 +247,4 @@ export const initializeExtensionIntegration = async (): Promise<ExtensionContext
  */
 export const cleanupExtensionIntegration = (): void => {
   clearExtensionOrigin();
-  console.log('🔧 [Extension] Extension integration cleaned up');
 }; 

@@ -2,16 +2,17 @@ import React from 'react';
 import { usePublicWorkflows } from '@/hooks/usePublicWorkflows';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Globe, Clock, User, Loader2, Palette, Footprints, Brain } from 'lucide-react';
+import { Globe, Clock, User, Loader2, Palette, Footprints, Brain, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { checkWorkflowOwnership, hasValidSessionToken } from '@/utils/authUtils';
+import EnhancedWorkflowDashboard from '@/components/EnhancedWorkflowDashboard';
 import '@/styles/brainAnimation.css';
 
 export const PublicWorkflowsGallery = () => {
   const { rows: workflows, loading, error } = usePublicWorkflows();
-  const { currentUserSessionToken } = useAppContext();
+  const { currentUserSessionToken, workflows: userWorkflows, activeExecutions } = useAppContext();
   const { theme } = useTheme();
   const [ownershipStatus, setOwnershipStatus] = React.useState<{[key: string]: boolean}>({});
 
@@ -153,6 +154,38 @@ export const PublicWorkflowsGallery = () => {
             Discover workflows created by the community.
           </p>
         </div>
+
+        {/* Global User Dashboard - Only show if user has workflows */}
+        {hasSessionToken && userWorkflows && userWorkflows.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className={`text-2xl font-semibold ${
+                theme === 'dark' ? 'text-cyan-300' : 'text-gray-900'
+              }`}>
+                Your Workflow Analytics
+              </h2>
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  // We'll use a simple approach - open in new tab or modal
+                  const event = new CustomEvent('openUserConsole');
+                  window.dispatchEvent(event);
+                }}
+                className={`flex items-center gap-2 ${
+                  theme === 'dark' 
+                    ? 'text-cyan-400 hover:text-cyan-300 hover:bg-gray-800 border-gray-600' 
+                    : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                </Button>
+            </div>
+            <EnhancedWorkflowDashboard 
+              workflows={userWorkflows} 
+              activeExecutions={activeExecutions}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {workflows.map((workflow) => {
