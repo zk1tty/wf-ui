@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   getStoredSessionToken, 
   validateSessionToken, 
@@ -23,82 +23,83 @@ export const useSessionValidation = (intervalMs: number = 60000) => {
     error: null
   });
 
+  // Add validation lock to prevent concurrent validation calls
+  const validationLock = useRef(false);
+  
   const validateSession = useCallback(async () => {
-    const storedToken = getStoredSessionToken();
-    
-    console.log('🔐 [useSessionValidation] Token status:', {
-      storedToken: storedToken ? `${storedToken.slice(0,8)}...` : null,
-      contextToken: currentUserSessionToken ? `${currentUserSessionToken.slice(0,8)}...` : null,
-      tokensMatch: storedToken === currentUserSessionToken
-    });
-    
-    // Sync tokens: if stored token exists but context doesn't have it, update context
-    if (storedToken && !currentUserSessionToken) {
-      console.log('🔐 [useSessionValidation] Syncing stored token to app context');
-      setCurrentUserSessionToken(storedToken);
-    }
-    
-    // Use the stored token for validation (most up-to-date)
-    const tokenToValidate = storedToken || currentUserSessionToken;
-    
-    if (!hasValidSessionToken(tokenToValidate)) {
-      console.log('🔐 [useSessionValidation] No valid session token found');
-      setState(prev => ({
-        ...prev,
-        isValid: false,
-        isChecking: false,
-        lastChecked: new Date(),
-        error: 'No session token found'
-      }));
-      
-      // Clear context if it has a token but storage doesn't
-      if (currentUserSessionToken && !storedToken) {
-        setCurrentUserSessionToken(null);
-      }
-      
+    // Prevent concurrent validations
+    if (validationLock.current) {
       return false;
     }
-
-    setState(prev => ({ ...prev, isChecking: true, error: null }));
-
+    
+    validationLock.current = true;
+    
     try {
-      console.log('🔐 [useSessionValidation] Validating token with backend...');
-      const isValid = await validateSessionToken(tokenToValidate!);
+      const storedToken = getStoredSessionToken();
+      const contextToken = currentUserSessionToken; // Capture current value
       
-      setState(prev => ({
-        ...prev,
-        isValid,
-        isChecking: false,
-        lastChecked: new Date(),
-        error: isValid ? null : 'Session token is invalid or expired'
-      }));
-
-      if (!isValid) {
-        console.log('🔐 [useSessionValidation] Token invalid - clearing from context');
-        setCurrentUserSessionToken(null);
-      } else {
-        // Ensure context has the valid token
-        if (tokenToValidate !== currentUserSessionToken) {
-          console.log('🔐 [useSessionValidation] Updating context with valid token');
-          setCurrentUserSessionToken(tokenToValidate);
+      // Use the stored token for validation (most up-to-date)
+      const tokenToValidate = storedToken;
+      
+      if (!hasValidSessionToken(tokenToValidate)) {
+        setState(prev => ({
+          ...prev,
+          isValid: false,
+          isChecking: false,
+          lastChecked: new Date(),
+          error: 'No session token found'
+        }));
+        
+        // Clear context if it has a token but storage doesn't
+        if (contextToken && !storedToken) {
+          setCurrentUserSessionToken(null);
         }
+        
+        return false;
       }
 
-      return isValid;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Session validation failed';
-      setState(prev => ({
-        ...prev,
-        isValid: false,
-        isChecking: false,
-        lastChecked: new Date(),
-        error: errorMessage
-      }));
-      
-      console.error('🔐 [useSessionValidation] Session validation error:', error);
-      return false;
+      setState(prev => ({ ...prev, isChecking: true, error: null }));
+
+      try {
+        const isValid = await validateSessionToken(tokenToValidate!);
+        
+        setState(prev => ({
+          ...prev,
+          isValid,
+          isChecking: false,
+          lastChecked: new Date(),
+          error: isValid ? null : 'Session token is invalid or expired'
+        }));
+
+        if (!isValid) {
+          setCurrentUserSessionToken(null);
+        } else {
+          // Ensure context has the valid token (but only if different to avoid loops)
+          // Also check if context is still different (in case another validation updated it)
+          const currentContextToken = currentUserSessionToken;
+          if (tokenToValidate !== currentContextToken) {
+            setCurrentUserSessionToken(tokenToValidate);
+          }
+        }
+
+        return isValid;
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Session validation failed';
+        setState(prev => ({
+          ...prev,
+          isValid: false,
+          isChecking: false,
+          lastChecked: new Date(),
+          error: errorMessage
+        }));
+        
+        console.error('❌ [SessionValidation] Error:', error);
+        return false;
+      }
+    } finally {
+      validationLock.current = false;
     }
-  }, [setCurrentUserSessionToken, currentUserSessionToken]);
+  }, [setCurrentUserSessionToken]); // REMOVED currentUserSessionToken dependency to break the loop
 
   // Periodic validation
   useEffect(() => {

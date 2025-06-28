@@ -19,13 +19,8 @@ export const checkWorkflowOwnership = async (
   workflowId: string
 ): Promise<boolean> => {
   try {
-    console.log('🔐 [Auth] Checking ownership for workflow:', workflowId);
-    console.log('🔐 [Auth] Session token type:', sessionToken.startsWith('eyJ') ? 'JWT' : 'Other');
-    
     const API = import.meta.env.VITE_PUBLIC_API_URL;
     const url = `${API}/workflows/${workflowId}/ownership?session_token=${encodeURIComponent(sessionToken)}`;
-    
-    console.log('🔐 [Auth] Making ownership request to:', url.replace(sessionToken, '[TOKEN]'));
     
     const response = await fetch(url, {
       method: 'GET',
@@ -34,22 +29,14 @@ export const checkWorkflowOwnership = async (
       }
     });
     
-    console.log(`🔐 [Auth] Response status: ${response.status} ${response.statusText}`);
-    
     if (response.ok) {
       const data: OwnershipCheckResponse = await response.json();
-      console.log('🔐 [Auth] ✅ Ownership check successful:', data);
       return data.is_owner;
     } else {
-      const errorText = await response.text();
-      console.error(`🔐 [Auth] ❌ Ownership check failed: ${response.status} - ${errorText}`);
-      
-      if (response.status === 401) {
-        console.log('🔐 [Auth] Unauthorized - invalid or expired session token');
-      } else if (response.status === 404) {
-        console.log('🔐 [Auth] Workflow not found');
+      if (response.status !== 401 && response.status !== 404) {
+        const errorText = await response.text();
+        console.error(`❌ [Auth] Ownership check failed: ${response.status} - ${errorText}`);
       }
-      
       return false;
     }
     
@@ -91,9 +78,8 @@ export const isFromExtension = (): boolean => {
 export const initializeSessionFromExtension = (sessionToken: string): void => {
   try {
     storeSessionToken(sessionToken);
-    console.log('🔐 [Auth] Session initialized from Chrome extension');
   } catch (error) {
-    console.error('🔐 [Auth] Error initializing session from extension:', error);
+    console.error('❌ [Auth] Error initializing session from extension:', error);
   }
 };
 
@@ -105,9 +91,8 @@ export const clearStoredAuth = (): void => {
     sessionStorage.removeItem('workflow_session_token');
     sessionStorage.removeItem('workflow_auth_type');
     sessionStorage.removeItem('from_extension');
-    console.log('🔐 [Auth] Cleared stored auth data');
   } catch (error) {
-    console.error('🔐 [Auth] Error clearing auth data:', error);
+    console.error('❌ [Auth] Error clearing auth data:', error);
   }
 };
 
@@ -128,9 +113,8 @@ export const storeSessionToken = (sessionToken: string): void => {
     sessionStorage.setItem('workflow_session_token', sessionToken);
     sessionStorage.setItem('workflow_auth_type', 'session');
     sessionStorage.setItem('from_extension', 'true');
-    console.log('🔐 [Auth] Session token stored successfully');
   } catch (error) {
-    console.error('🔐 [Auth] Error storing session token:', error);
+    console.error('❌ [Auth] Error storing session token:', error);
   }
 };
 
@@ -155,41 +139,28 @@ export const canEditWorkflow = (
   isPublicWorkflow: boolean,
   isLegacyWorkflow: boolean = false
 ): boolean => {
-  console.log('🔍 [canEditWorkflow] Input parameters:', {
-    sessionToken: sessionToken ? `${sessionToken.slice(0,8)}...` : null,
-    isOwner,
-    isPublicWorkflow,
-    isLegacyWorkflow
-  });
-
   // No session token = no editing
   if (!hasValidSessionToken(sessionToken)) {
-    console.log('🔍 [canEditWorkflow] Result: false (no valid session token)');
     return false;
   }
   
   // Owner can always edit their workflows
   if (isOwner) {
-    console.log('🔍 [canEditWorkflow] Result: true (user is owner)');
     return true;
   }
   
   // Legacy workflows (owner_id = NULL) can be edited by any authenticated user
   if (isLegacyWorkflow) {
-    console.log('🔍 [canEditWorkflow] Result: true (legacy workflow)');
     return true;
   }
   
   // Public workflows owned by others = read-only (fork required)
   if (isPublicWorkflow && !isOwner) {
-    console.log('🔍 [canEditWorkflow] Result: false (public workflow, not owner)');
     return false;
   }
   
   // Private workflows = owner only
-  const result = isOwner;
-  console.log('🔍 [canEditWorkflow] Result:', result, '(private workflow, owner check)');
-  return result;
+  return isOwner;
 };
 
 /**
@@ -200,20 +171,14 @@ export const validateSessionToken = async (sessionToken: string): Promise<boolea
   try {
     // Safety check: Don't validate null, undefined, or empty tokens
     if (!sessionToken || typeof sessionToken !== 'string' || sessionToken.trim().length === 0) {
-      console.log('🔐 [Auth] ❌ Cannot validate empty or null session token');
       return false;
     }
-
-    console.log('🔐 [Auth] Validating session token...', {
-      tokenLength: sessionToken.length,
-      tokenPreview: `${sessionToken.slice(0,8)}...${sessionToken.slice(-4)}`
-    });
     
     const API = import.meta.env.VITE_PUBLIC_API_URL;
     
     // Safety check: Ensure API URL exists
     if (!API) {
-      console.error('🔐 [Auth] ❌ API URL not configured');
+      console.error('❌ [Auth] API URL not configured');
       return false;
     }
 
@@ -228,18 +193,16 @@ export const validateSessionToken = async (sessionToken: string): Promise<boolea
     });
     
     const isValid = response.ok;
-    console.log(`🔐 [Auth] Session validation result: ${isValid ? '✅ Valid' : '❌ Invalid/Expired'} (${response.status})`);
     
     // If invalid, clear the stored token
     if (!isValid) {
-      console.log('🔐 [Auth] Clearing invalid session token');
       clearStoredAuth();
     }
     
     return isValid;
     
   } catch (error) {
-    console.error('🔐 [Auth] Error validating session token:', error);
+    console.error('❌ [Auth] Error validating session token:', error);
     return false;
   }
 };

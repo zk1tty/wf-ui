@@ -24,12 +24,6 @@ export const CompactExtensionIndicator: React.FC<CompactExtensionIndicatorProps>
     
     setContext(extensionContext);
     setFromExtension(isFromExt);
-    
-    console.log('🔧 [ExtensionBanner] Status refreshed:', {
-      isExtension: extensionContext.isExtension,
-      fromExtension: isFromExt,
-      hasSessionToken: !!currentUserSessionToken
-    });
   };
 
   useEffect(() => {
@@ -43,7 +37,6 @@ export const CompactExtensionIndicator: React.FC<CompactExtensionIndicatorProps>
 
   // Refresh when authentication refresh is triggered
   useEffect(() => {
-    console.log('🔧 [ExtensionBanner] Authentication refresh triggered:', authRefreshTrigger);
     refreshExtensionStatus();
   }, [authRefreshTrigger]);
 

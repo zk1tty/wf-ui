@@ -12,7 +12,8 @@ import {
   CheckCircle,
   Clock,
   RefreshCw,
-  LogIn
+  LogIn,
+  BarChart3
 } from 'lucide-react';
 import { 
   getStoredSessionToken, 
@@ -166,6 +167,25 @@ export const SessionStatus: React.FC<SessionStatusProps> = ({
         </div>
         
         <div className="flex items-center space-x-2">
+          {showDetails && isAuthenticated && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const event = new CustomEvent('openUserConsole');
+                window.dispatchEvent(event);
+              }}
+              className={`${
+                theme === 'dark' 
+                  ? 'text-cyan-400 hover:text-cyan-300 hover:bg-gray-800' 
+                  : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50'
+              }`}
+            >
+              <BarChart3 className="h-3 w-3 mr-1" />
+              Console
+            </Button>
+          )}
+          
           {showDetails && (
             <Button
               variant="ghost"

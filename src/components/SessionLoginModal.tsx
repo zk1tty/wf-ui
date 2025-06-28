@@ -61,8 +61,7 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
         throw new Error('Session token appears to be too short');
       }
 
-      // NEW: Validate with backend before storing
-      console.log('🔐 [SessionLoginModal] Validating session token with backend...');
+      // Validate with backend before storing
       const isValid = await validateSessionToken(sessionToken);
       
       if (!isValid) {
@@ -72,8 +71,6 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
       // Store the session token
       initializeSessionFromExtension(sessionToken);
       setCurrentUserSessionToken(sessionToken);
-
-      console.log('🔐 [SessionLoginModal] Login successful - token validated and stored');
 
       // Close modal and reset form
       onOpenChange(false);
@@ -89,7 +86,7 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
       });
       
     } catch (error) {
-      console.error('🔐 [SessionLoginModal] Session token validation failed:', error);
+      console.error('❌ [SessionLoginModal] Session token validation failed:', error);
       setValidationError(
         error instanceof Error ? error.message : 'Invalid session token'
       );
