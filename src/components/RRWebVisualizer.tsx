@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import { WorkflowVisualizer } from './WorkflowVisualizer';
+import { FrontendScreensaver } from './FrontendScreensaver';
 
 interface RRWebVisualizerProps {
   sessionId?: string;
@@ -44,6 +45,9 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
   const [playerState, setPlayerState] = useState<'loading' | 'ready' | 'playing' | 'error'>('loading');
   const [playerError, setPlayerError] = useState<string | null>(null);
   
+  // 🔄 CONTENT SWITCHING: Track when to switch from screensaver to RRWeb content
+  const [hasRealContent, setHasRealContent] = useState(false);
+  
   // Simple state (official rrweb stream pattern)
   const [autoCloseTimer, setAutoCloseTimer] = useState<NodeJS.Timeout | null>(null);
 
@@ -52,6 +56,7 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
     console.log('🎥 [RRWebVisualizer] rrweb imported locally');
     setRrwebLoaded(true);
     addLog('rrweb library loaded successfully', 'success');
+    addLog('✅ Using official RRWeb live mode pattern (animation fix)', 'info');
   }, []);
 
   // Throttled log function
@@ -76,6 +81,38 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
       flushLogsTimer.current = setTimeout(flushLogs, 2000);
     }
   }, [flushLogs]);
+
+  // CSP configuration for enhanced security (Option 3)
+  const configureiFrameCSP = useCallback((iframe: HTMLIFrameElement) => {
+    try {
+      // Wait for iframe to load
+      iframe.onload = () => {
+        try {
+          const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+          if (iframeDoc) {
+            // Add CSP meta tag to iframe document
+            const meta = iframeDoc.createElement('meta');
+            meta.httpEquiv = 'Content-Security-Policy';
+            meta.content = "default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';";
+            
+            // Add meta tag to head or create head if it doesn't exist
+            let head = iframeDoc.head;
+            if (!head) {
+              head = iframeDoc.createElement('head');
+              iframeDoc.documentElement.appendChild(head);
+            }
+            head.appendChild(meta);
+            
+            addLog('✅ CSP headers configured for iframe document', 'success');
+          }
+        } catch (error) {
+          addLog(`⚠️ Could not configure CSP: ${error instanceof Error ? error.message : String(error)}`, 'warning');
+        }
+      };
+    } catch (error) {
+      addLog(`⚠️ CSP configuration failed: ${error instanceof Error ? error.message : String(error)}`, 'warning');
+    }
+  }, [addLog]);
 
   // Session ID validation helper
   const validateSessionId = useCallback((sessionId: string) => {
@@ -122,33 +159,20 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
     }
     
       // Iframe ref exists, but now wait for React to finish DOM operations
-      console.log('✅ [RRWebVisualizer] Iframe ref ready, waiting for React DOM operations...');
+      console.log('✅ [RRWebVisualizer] Initializing player...');
       
       // Use requestAnimationFrame to ensure React has completed its render cycle
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          // Double requestAnimationFrame ensures React's commit phase is complete
-          console.log('✅ [RRWebVisualizer] React render cycle complete, initializing WorkflowVisualizer...');
-          console.log('🔍 [RRWebVisualizer] Final iframe check - in DOM:', document.contains(iframeRef.current!));
-          console.log('🔍 [RRWebVisualizer] Iframe reference details:');
-          console.log('  - Iframe object:', iframeRef.current);
-          console.log('  - Iframe tagName:', iframeRef.current!.tagName);
-          console.log('  - Iframe parentElement:', iframeRef.current!.parentElement);
-          console.log('  - Iframe isConnected:', iframeRef.current!.isConnected);
-
           // Small delay to ensure iframe is fully stable in DOM
           setTimeout(() => {
             // Re-verify iframe is still good before passing to WorkflowVisualizer
             if (!iframeRef.current || !document.contains(iframeRef.current)) {
-              console.error('❌ [RRWebVisualizer] Iframe became invalid before WorkflowVisualizer initialization');
+              console.error('❌ [RRWebVisualizer] Iframe became invalid');
               addLog('❌ Iframe became invalid', 'error');
               setConnectionStatus('error');
-      return;
-    }
-
-            console.log('🎯 [RRWebVisualizer] Final verification before WorkflowVisualizer:');
-            console.log('  - Iframe still in DOM:', document.contains(iframeRef.current));
-            console.log('  - Iframe still connected:', iframeRef.current.isConnected);
+              return;
+            }
 
             // Simple visualizer setup
       visualizerRef.current = new WorkflowVisualizer({
@@ -165,11 +189,21 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
         onEvent: (data: any) => {
           if (data.type === 'player_ready') {
             setPlayerState('playing');
-                  addLog('🎬 RRWeb player ready!', 'success');
-                }
-                // Update stats
-                const newStats = visualizerRef.current?.getStatistics();
-                if (newStats) setStats(newStats);
+            addLog('🎬 RRWeb player ready - live mode activated!', 'success');
+          }
+          
+          // 🎬 SCREENSAVER → RRWEB SWITCH: Detect FullSnapshot (type=2) to switch from screensaver to recorded content
+          if (data.event_data?.type === 2 || data.event?.type === 2) {
+            if (!hasRealContent) {
+              console.log('🔄 [Content Switch] FullSnapshot detected - switching from screensaver to RRWeb');
+              setHasRealContent(true);
+              addLog('🔄 Content detected - switching to RRWeb playback', 'success');
+            }
+          }
+          
+          // Update stats
+          const newStats = visualizerRef.current?.getStatistics();
+          if (newStats) setStats(newStats);
         },
         onError: (error: Error) => {
           setConnectionStatus('error');
@@ -178,17 +212,25 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
         }
       });
 
-            // Initialize player container
-            console.log('🚀 [RRWebVisualizer] Passing iframe to WorkflowVisualizer...');
-            console.log('🔍 [RRWebVisualizer] Iframe object identity before passing:', iframeRef.current);
-            console.log('🔍 [RRWebVisualizer] Iframe.__reactInternalInstance:', (iframeRef.current as any).__reactInternalInstance);
-            console.log('🔍 [RRWebVisualizer] Iframe unique ID for tracking:', iframeRef.current.tagName + '-' + Date.now());
-            
             // Store reference for debugging
             (window as any).debugIframeRef = iframeRef.current;
             
-            visualizerRef.current.initializePlayer(iframeRef.current);
-      connectToExistingSession();
+            // Configure CSP for iframe security (Option 3)
+            configureiFrameCSP(iframeRef.current);
+            
+            // Initialize player (now async) and then connect
+            // ✅ Uses official RRWeb live mode pattern: startLive() called when first event arrives
+            (async () => {
+              try {
+                await visualizerRef.current!.initializePlayer(iframeRef.current!);
+                console.log('✅ [RRWebVisualizer] Player ready - connecting to stream');
+                connectToExistingSession();
+              } catch (error) {
+                console.error('❌ [RRWebVisualizer] Player initialization failed:', error);
+                addLog(`❌ Player initialization failed: ${error instanceof Error ? error.message : String(error)}`, 'error');
+                setConnectionStatus('error');
+              }
+            })();
           }, 100); // Small delay to ensure DOM stability
         });
       });
@@ -312,10 +354,18 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
       <div className="flex-1 bg-white min-h-0">
         <div className="h-full p-2 min-h-0">
           <div className="relative w-full h-full border rounded bg-gray-50 overflow-hidden min-h-[400px]">
-            {/* Always render iframe - critical for RRWeb injection */}
+            {/* 🎬 FRONTEND SCREENSAVER: Show until RRWeb content arrives */}
+            <FrontendScreensaver isVisible={!hasRealContent} />
+
+            {/* ✅ RRWeb iframe - shown when real content arrives */}
             <iframe 
               ref={iframeRef} 
               src="about:blank"
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+              // IFRAME SECURITY OPTIONS:
+              // Option 1 (current): "allow-scripts" - Minimal permissions to prevent security warnings
+              // Option 2 (fallback): "allow-scripts allow-same-origin allow-popups allow-forms" - More permissions if needed
+              // Option 3: Remove sandbox entirely and use CSP headers for document-level control
               className="w-full h-full overflow-hidden bg-white rounded border-0 rrweb-iframe" 
               title="rrweb-player"
               style={{
@@ -325,7 +375,8 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
                 minHeight: '400px',
                 maxHeight: '100%',
                 backgroundColor: '#ffffff',
-                border: '1px solid #e5e7eb'
+                border: '1px solid #e5e7eb',
+                display: hasRealContent ? 'block' : 'none'
               }}
             />
             
@@ -357,9 +408,9 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
               <div className="absolute inset-0 flex items-center justify-center z-10 bg-white bg-opacity-90">
                 <div className="text-center text-gray-600">
                   <div className="text-2xl mb-2">🎥</div>
-                  <div>Connecting to Web streaming...</div>
+                  <div>Initializing visual streaming...</div>
                   <div className="text-xs mt-2 text-gray-500">
-                    Waiting for /workflows/visual/{sessionId}/stream
+                    Live mode will activate when first event arrives
                   </div>
                 </div>
               </div>
