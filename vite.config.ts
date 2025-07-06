@@ -11,14 +11,14 @@ export default defineConfig({
     proxy: {
       // Proxy API calls to backend to avoid CORS issues
       '/api': {
-        target: 'http://localhost:8000',
+        target: process.env.VITE_PUBLIC_API_URL || 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
         ws: false, // Don't proxy WebSocket connections through this route
       },
       // Proxy workflow-related calls to backend
       '/workflows': {
-        target: 'http://localhost:8000',
+        target: process.env.VITE_PUBLIC_API_URL || 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
         ws: true, // Enable WebSocket proxying for DevTools
@@ -31,9 +31,9 @@ export default defineConfig({
     },
   },
   define: {
-    // Use localhost for API URL when using proxy (proxy will route to backend)
+    // Use backend URL directly (no proxy needed in production)
     'import.meta.env.VITE_PUBLIC_API_URL': JSON.stringify(
-      process.env.VITE_PUBLIC_API_URL || 'http://localhost:5173'
+      process.env.VITE_PUBLIC_API_URL || 'http://localhost:8000'
     ),
   },
 });
