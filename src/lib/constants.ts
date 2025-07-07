@@ -9,9 +9,10 @@ export const IS_PRODUCTION = window.location.hostname !== 'localhost';
 /**
  * Base API URL - automatically switches between development and production
  * In development, use empty string to leverage Vite proxy
- * In production, use empty string for relative URLs
+ * In production, use the backend API server URL
  */
-export const API_BASE_URL = '';
+export const API_BASE_URL = import.meta.env.VITE_PUBLIC_API_URL || 
+  (IS_PRODUCTION ? 'https://api.rebrowse.me' : '');
 
 /**
  * WebSocket base URL - automatically switches between development and production
