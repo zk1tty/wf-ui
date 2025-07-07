@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { DevToolsStatus } from '@/components/DevToolsStatus';
-import { DevToolsIframe } from '@/components/DevToolsIframe';
+import DevToolsIframe from '@/components/DevToolsIframe';
 import { useDevToolsWebSocket } from '@/hooks/useDevToolsWebSocket';
 import { useDevToolsStatus } from '@/hooks/useDevToolsStatus';
 import { useAppContext } from '@/contexts/AppContext';
