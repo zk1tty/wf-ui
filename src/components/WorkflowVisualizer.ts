@@ -86,11 +86,7 @@ export class WorkflowVisualizer {
 
   async startWorkflow(workflowName: string, inputs: any = {}, options: any = {}): Promise<any> {
     try {
-      console.log('🚀 [WorkflowVisualizer] Starting workflow...');
-      console.log('🔍 [WorkflowVisualizer] Workflow name:', workflowName);
-      console.log('🔍 [WorkflowVisualizer] Inputs:', inputs);
-      console.log('🔍 [WorkflowVisualizer] Options:', options);
-      
+      // Remove verbose logging - keep only essential info
       const requestBody = {
         inputs: inputs,
         session_token: options.sessionToken,
@@ -100,117 +96,59 @@ export class WorkflowVisualizer {
         visual_quality: options.quality || this.config.quality,
         visual_events_buffer: options.bufferSize || this.config.bufferSize
       };
-      
-      console.log('📤 [WorkflowVisualizer] Request body:', requestBody);
-      
+
       const response = await fetch(API_ENDPOINTS.EXECUTE_WORKFLOW(workflowName), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
       });
-      
-      console.log('📥 [WorkflowVisualizer] Response status:', response.status);
-      console.log('🔍 [WorkflowVisualizer] Response headers:', Object.fromEntries(response.headers.entries()));
-      
-      const result = await response.json();
-      console.log('📋 [WorkflowVisualizer] Response data:', result);
-      
-      if (result.success) {
-        const sessionId = result.session_id || result.task_id;
-        console.log('✅ [WorkflowVisualizer] Workflow started successfully');
-        console.log('🔍 [WorkflowVisualizer] Session ID:', sessionId);
-        
-        if (sessionId) {
-          this.state.sessionId = sessionId;
-          console.log('🔌 [WorkflowVisualizer] Initiating WebSocket connection...');
-          await this.connectToStream(sessionId);
-          console.log('✅ [WorkflowVisualizer] WebSocket connection established');
-          return { ...result, session_id: sessionId };
-        } else {
-          throw new Error('No session ID or task ID returned from backend');
-        }
-      } else {
-        console.error('❌ [WorkflowVisualizer] Workflow start failed:', result.message);
-        throw new Error(result.message || 'Failed to start visual workflow');
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
+      const result = await response.json();
+      const sessionId = result.session_id || result.task_id;
+
+      if (!sessionId) {
+        throw new Error('No session ID received from server');
+      }
+
+      // Connect to WebSocket stream
+      await this.connectToStream(sessionId);
+
     } catch (error) {
-      console.error('❌ [WorkflowVisualizer] startWorkflow error:', error);
-      this.callbacks.onError(error as Error);
+      console.error('❌ [WorkflowVisualizer] Failed to start workflow:', error);
       throw error;
     }
   }
 
-  // Step 4: Simplified connection - official rrweb stream pattern
   async connectToStream(sessionId: string): Promise<void> {
     const wsUrl = API_ENDPOINTS.VISUAL_STREAM_WS(sessionId);
     
-    console.log('🔌 [WorkflowVisualizer] Connecting to WebSocket:', wsUrl);
-    console.log('🔍 [WorkflowVisualizer] Session ID:', sessionId);
-    
-    this.state.sessionId = sessionId;
     this.state.websocket = new WebSocket(wsUrl);
-    this.stats.startTime = Date.now();
-    
+    this.state.isConnected = false;
+
     this.state.websocket.onopen = () => {
       this.state.isConnected = true;
-      console.log('✅ [WorkflowVisualizer] WebSocket connected successfully');
-      console.log('🔍 [WorkflowVisualizer] WebSocket readyState:', this.state.websocket?.readyState);
-      console.log('🔍 [WorkflowVisualizer] WebSocket protocol:', this.state.websocket?.protocol);
       this.callbacks.onConnect(sessionId);
     };
-    
+
     this.state.websocket.onmessage = (event) => {
-      console.log('📨 [WorkflowVisualizer] Raw WebSocket message received');
-      console.log('🔍 [WorkflowVisualizer] Message type:', typeof event.data);
-      console.log('🔍 [WorkflowVisualizer] Message size:', event.data instanceof Blob ? event.data.size : event.data.length);
-      
-      // 🔧 ENHANCED WEBSOCKET HANDLING: Add message validation and routing
-      try {
-        // Quick validation for backend message structure
-        if (typeof event.data === 'string') {
-          const preview = event.data.substring(0, 100);
-          console.log('🔍 [WebSocket Preview]:', preview);
-          
-          // Check for new backend event structure
-          if (event.data.includes('"session_id"') && 
-              event.data.includes('"sequence_id"') &&
-              event.data.includes('"event"')) {
-            console.log('✅ [WebSocket] Backend event message detected');
-          }
-          
-          // Check for backend status messages (if still used)
-          if (event.data.includes('"type":"status"') || 
-              event.data.includes('"type":"recording_status"') ||
-              event.data.includes('"type":"csp_bypass_status"')) {
-            console.log('📊 [WebSocket] Backend status message detected');
-          }
-          
-          // Check for error messages
-          if (event.data.includes('"error"') || event.data.includes('"error_type"')) {
-            console.log('❌ [WebSocket] Backend error message detected');
-          }
-        }
-        
-        this.handleMessage(event);
-      } catch (error) {
-        console.error('❌ [WebSocket] Failed to process message:', error);
-        this.callbacks.onError(error as Error);
-      }
+      this.handleMessage(event);
     };
-    
+
     this.state.websocket.onclose = (event) => {
       this.state.isConnected = false;
-      console.log('🔌 [WorkflowVisualizer] WebSocket closed');
-      console.log('🔍 [WorkflowVisualizer] Close code:', event.code);
-      console.log('🔍 [WorkflowVisualizer] Close reason:', event.reason);
-      console.log('🔍 [WorkflowVisualizer] Was clean:', event.wasClean);
+      // Only log if it's not a clean close
+      if (!event.wasClean) {
+        console.warn('⚠️ [WorkflowVisualizer] WebSocket closed unexpectedly:', event.code);
+      }
       this.callbacks.onDisconnect(event);
     };
 
     this.state.websocket.onerror = (error) => {
       console.error('❌ [WorkflowVisualizer] WebSocket error:', error);
-      console.log('🔍 [WorkflowVisualizer] WebSocket readyState:', this.state.websocket?.readyState);
       this.callbacks.onError(new Error('WebSocket connection failed'));
     };
   }
@@ -265,92 +203,32 @@ export class WorkflowVisualizer {
   // Step 2: Simplified message handling - official rrweb stream pattern
   private async handleMessage(event: MessageEvent): Promise<void> {
     try {
-      let data: any;
+      const data = JSON.parse(event.data);
       
-      // Parse message (handle both string and Blob)
-      if (event.data instanceof Blob) {
-        data = JSON.parse(await event.data.text());
-      } else {
-        data = JSON.parse(event.data);
-      }
-      
-      // Update basic stats
-      this.stats.eventsReceived++;
-      this.stats.bytesReceived += event.data instanceof Blob ? event.data.size : event.data.length;
-      
-      // 🚨 ENHANCED ERROR HANDLING: Check for backend error messages
-      if (data.error || data.error_type) {
+      // Handle different message types
+      if (data.type === 'rrweb_event' && data.event) {
+        const rrwebEvent = data.event;
+        
+        // Process the rrweb event if we found one
+        if (rrwebEvent && typeof rrwebEvent.type === 'number') {
+          try {
+            this.addEventDirectly(rrwebEvent);
+          } catch (replayError) {
+            console.warn('⚠️ [WorkflowVisualizer] RRWeb replay error (continuing):', replayError);
+          }
+        } else {
+          console.warn('⚠️ [WorkflowVisualizer] Invalid rrweb event format');
+        }
+      } else if (data.type === 'error') {
         this.handleBackendError(data);
-        return;
-      }
-      
-      // 🔧 BACKEND STATUS MESSAGES: Handle new backend message types
-      if (data.type === 'status' || data.type === 'recording_status' || data.type === 'csp_bypass_status') {
+      } else if (data.type === 'status') {
         this.handleBackendStatus(data);
-        return;
-      }
-      
-      // ✅ MULTI-FORMAT EVENT PROCESSING: Handle multiple backend format variations (Fix Strategy 3)
-      let rrwebEvent = null;
-      
-      // Handle multiple format variations for backward compatibility
-      if (data.event) {
-        rrwebEvent = data.event;        // New format: {session_id, timestamp, event, sequence_id}
-        console.log('✅ [New Format] Received data.event');
-        
-        // Validate structured backend message
-        if (this.isRRWebEventMessage(data)) {
-          console.log('🔍 [Event Info]:', {
-            session_id: data.session_id,
-            sequence_id: data.sequence_id,
-            timestamp: data.timestamp,
-            event_type: data.event?.type || 'unknown'
-          });
-          
-          // Validate sequence ID if present
-          if (data.sequence_id !== undefined) {
-            this.validateEventSequence(data.sequence_id);
-          }
-          
-          // Validate session ID matches current session
-          if (data.session_id !== this.state.sessionId) {
-            console.warn('⚠️ [Session Mismatch] Event session_id:', data.session_id, 'Expected:', this.state.sessionId);
-          }
-        }
-      } else if (data.event_data) {
-        rrwebEvent = data.event_data;   // Legacy format: {event_data, ...}
-        console.log('🔄 [Legacy Format] Received data.event_data');
-      } else if (data.type !== undefined && typeof data.type === 'number') {
-        rrwebEvent = data;              // Direct format: {type, timestamp, ...}
-        console.log('🔗 [Direct Format] Received direct rrweb event');
-      }
-      
-      // Process the rrweb event if we found one
-      if (rrwebEvent && typeof rrwebEvent.type === 'number') {
-        try {
-          console.log('✅ [Event Processing] Processing rrweb event type:', rrwebEvent.type);
-          this.addEventDirectly(rrwebEvent);
-        } catch (replayError) {
-          console.warn('rrweb replayer error (continuing):', replayError);
-          // Don't throw - continue despite replay errors (matches fix strategy)
-        }
-      } else {
-        console.warn('⚠️ [Invalid Event] No valid rrweb event found in message');
-        console.log('🔍 [Expected]: event.type should be a number');
-        console.log('🔍 [Received Keys]:', Object.keys(data));
-        console.log('🔍 [Message Sample]:', JSON.stringify(data).substring(0, 200) + '...');
-        
-        // Log detailed structure validation for debugging
-        this.logStructureValidation(data);
       }
       
       this.callbacks.onEvent(data);
       
     } catch (error) {
       console.error('❌ [WorkflowVisualizer] Failed to handle message:', error);
-      console.error('🔍 [WorkflowVisualizer] Raw message data:', event.data);
-      
-      // 🔧 ENHANCED ERROR RECOVERY: Attempt recovery based on error type
       this.handleMessageError(error as Error, event.data);
     }
   }
@@ -361,72 +239,17 @@ export class WorkflowVisualizer {
     const errorMessage = data.error || data.message || 'Unknown backend error';
     
     console.error('❌ [Backend Error]', errorType + ':', errorMessage);
-    
-    switch (errorType) {
-      case 'csp_blocking':
-        console.error('🚫 [CSP Blocking] Amazon CSP prevented rrweb injection');
-        console.log('💡 [Solution] Backend should be using CSP bypass mode');
-        break;
-        
-      case 'navigation_lost':
-        console.error('🔄 [Navigation Lost] SPA navigation broke recording');
-        console.log('💡 [Solution] Backend should re-inject after navigation');
-        break;
-        
-      case 'recording_stopped':
-        console.error('⏹️ [Recording Stopped] Backend recording failed');
-        console.log('💡 [Solution] Backend should attempt recovery');
-        break;
-        
-      case 'sequence_corruption':
-        console.error('🔢 [Sequence Error] Event sequence corrupted');
-        console.log('💡 [Solution] Requesting sequence reset');
-        this.requestSequenceReset();
-        break;
-        
-      case 'amazon_anti_bot':
-        console.error('🤖 [Anti-Bot] Amazon detected automation');
-        console.log('💡 [Solution] Backend should use stealth mode');
-        break;
-        
-      default:
-        console.error('❓ [Unknown Error] Unhandled backend error type:', errorType);
-    }
-    
     this.callbacks.onError(new Error(`Backend Error (${errorType}): ${errorMessage}`));
   }
 
   // 📊 BACKEND STATUS HANDLING: Handle new backend status messages
   private handleBackendStatus(data: any): void {
+    // Only log critical status changes
     const statusType = data.type;
     const status = data.status || data.success;
     
-    console.log('📊 [Backend Status]', statusType + ':', status);
-    
-    switch (statusType) {
-      case 'csp_bypass_status':
-        if (status) {
-          console.log('✅ [CSP Bypass] Successfully bypassed Amazon CSP');
-        } else {
-          console.warn('⚠️ [CSP Bypass] Failed to bypass CSP, recording may be limited');
-        }
-        break;
-        
-      case 'recording_status':
-        if (status) {
-          console.log('✅ [Recording] Backend recording active');
-        } else {
-          console.warn('⚠️ [Recording] Backend recording inactive');
-        }
-        break;
-        
-      case 'navigation_detected':
-        console.log('🔄 [Navigation] SPA navigation detected:', data.url);
-        break;
-        
-      case 'amazon_optimizations':
-        console.log('🎯 [Amazon] Backend Amazon optimizations enabled');
-        break;
+    if (statusType === 'recording_status' && !status) {
+      console.warn('⚠️ [Backend] Recording stopped unexpectedly');
     }
     
     this.callbacks.onEvent(data);
@@ -560,13 +383,13 @@ export class WorkflowVisualizer {
       this.animationEventCount++;
     }
 
-    // Track timestamp for duplicate detection (simple approach)
+    // Skip duplicate events
     if (protectedEvent.timestamp && protectedEvent.timestamp === this.lastEventTimestamp) {
       this.duplicateEventCount++;
       if (this.duplicateEventCount > 5) {
-        console.warn('⚠️ [WorkflowVisualizer] Multiple duplicate events detected - stream may have issues');
+        console.warn('⚠️ [WorkflowVisualizer] Multiple duplicate events detected');
       }
-      return; // Skip exact duplicate timestamps
+      return;
     }
     this.lastEventTimestamp = protectedEvent.timestamp || 0;
 
@@ -580,21 +403,17 @@ export class WorkflowVisualizer {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       
-      // CSS errors are now handled by patchRRWebCssProcessing
+      // CSS errors are handled by patchRRWebCssProcessing
       if (errorMsg.includes('Regular expression too large') || 
           errorMsg.includes('adaptCssForReplay') ||
           errorMsg.includes('Invalid regular expression') ||
           errorMsg.includes('Pattern too large') ||
           errorMsg.includes('Regex overflow') ||
           errorMsg.includes('SyntaxError: Invalid regular expression')) {
-        
-        console.warn('🎨 [CSS] CSS regex overflow detected - handled by patchRRWebCssProcessing:', errorMsg);
         return; // Skip this event - protection already applied
       }
       
-      // Handle other errors
       console.warn('⚠️ [WorkflowVisualizer] Event processing error (continuing):', error);
-      // Don't throw - continue processing other events
     }
 
     // Update statistics
@@ -642,14 +461,11 @@ export class WorkflowVisualizer {
   private validateEventSequence(sequenceId: number): void {
     if (sequenceId !== this.expectedSequenceId) {
       this.sequenceErrors++;
-      console.warn('⚠️ [Sequence Error] Expected:', this.expectedSequenceId, 'Got:', sequenceId);
-      
       if (this.sequenceErrors > 5) {
         console.error('❌ [Sequence] Too many sequence errors - event ordering may be corrupted');
         this.callbacks.onError(new Error('Event sequence corruption detected'));
       }
     }
-    
     this.expectedSequenceId = sequenceId + 1;
   }
 

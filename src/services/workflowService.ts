@@ -123,9 +123,7 @@ class WorkflowServiceImpl implements WorkflowService {
     try {
       // Since there's no direct /workflows/{id} endpoint, we need to:
       // 1. Fetch all public workflows from /workflows/
-      // 2. Find the one with matching ID
-      console.log('[workflowService] Fetching all public workflows to find ID:', id);
-      
+      // 2. Find the one with matching ID      
       const allWorkflows = await apiFetch<any[]>('/workflows/', { auth: false });
             
       if (!Array.isArray(allWorkflows)) {
@@ -142,10 +140,7 @@ class WorkflowServiceImpl implements WorkflowService {
       
       if (!targetWorkflow) {
         throw new Error(`Workflow with ID "${id}" not found`);
-      }
-      
-      console.log('[workflowService] Found target workflow:', targetWorkflow);
-      
+      }      
       // Extract the actual workflow data from the nested structure
       const workflow = targetWorkflow.json || targetWorkflow;
       
@@ -155,8 +150,6 @@ class WorkflowServiceImpl implements WorkflowService {
       
       // Normalize the workflow data to match our Zod schema expectations
       const normalizedWorkflow = this.normalizeWorkflowData(workflow);
-      
-      console.log('[workflowService] Normalized workflow data:', normalizedWorkflow);
       
       return normalizedWorkflow;
     } catch (error) {
@@ -178,7 +171,6 @@ class WorkflowServiceImpl implements WorkflowService {
           auth: false
         });
         
-        console.log('[workflowService] Upload response (session-based):', response);
         return response;
       } else {
         // Fallback to public upload (no auth)
@@ -188,7 +180,6 @@ class WorkflowServiceImpl implements WorkflowService {
           auth: false
         });
         
-        console.log('[workflowService] Upload response (public):', response);
         return response;
       }
     } catch (error) {
@@ -200,7 +191,6 @@ class WorkflowServiceImpl implements WorkflowService {
   async getUploadStatus(jobId: string): Promise<any> {
     try {
       const status = await apiFetch<any>(`/workflows/upload/${jobId}/status`, { auth: false });
-      console.log('[workflowService] Upload status:', status);
       return status;
     } catch (error) {
       console.error('[workflowService] Failed to get upload status:', error);
@@ -348,7 +338,7 @@ class WorkflowServiceImpl implements WorkflowService {
           })
         };
 
-        console.log('📤 [WorkflowService] Sending execution request:', {
+        console.debug('📤 [WorkflowService] Sending execution request:', {
           endpoint,
           workflowId,
           requestBody: {
@@ -374,7 +364,7 @@ class WorkflowServiceImpl implements WorkflowService {
           auth: false
         });
         
-        console.log('📥 [WorkflowService] Response from executeWorkflow (session-based):', {
+        console.debug('📥 [WorkflowService] Response from executeWorkflow (session-based):', {
           success: data.success,
           task_id: data.task_id,
           workflow: data.workflow,

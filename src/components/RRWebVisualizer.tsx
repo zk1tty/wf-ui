@@ -53,10 +53,8 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
 
   // Load rrweb
   useEffect(() => {
-    console.log('🎥 [RRWebVisualizer] rrweb imported locally');
     setRrwebLoaded(true);
     addLog('rrweb library loaded successfully', 'success');
-    addLog('✅ Using official RRWeb live mode pattern (animation fix)', 'info');
   }, []);
 
   // Throttled log function
@@ -153,13 +151,11 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
     }
 
         // Iframe not ready yet, wait a bit more
-        console.log(`🔄 [RRWebVisualizer] Waiting for iframe to be rendered... (attempt ${attempts})`);
         setTimeout(initializeWhenReady, 100);
       return;
     }
     
       // Iframe ref exists, but now wait for React to finish DOM operations
-      console.log('✅ [RRWebVisualizer] Initializing player...');
       
       // Use requestAnimationFrame to ensure React has completed its render cycle
       requestAnimationFrame(() => {
@@ -195,7 +191,6 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
           // 🎬 SCREENSAVER → RRWEB SWITCH: Detect FullSnapshot (type=2) to switch from screensaver to recorded content
           if (data.event_data?.type === 2 || data.event?.type === 2) {
             if (!hasRealContent) {
-              console.log('🔄 [Content Switch] FullSnapshot detected - switching from screensaver to RRWeb');
               setHasRealContent(true);
               addLog('🔄 Content detected - switching to RRWeb playback', 'success');
             }
@@ -223,7 +218,6 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
             (async () => {
               try {
                 await visualizerRef.current!.initializePlayer(iframeRef.current!);
-                console.log('✅ [RRWebVisualizer] Player ready - connecting to stream');
                 connectToExistingSession();
               } catch (error) {
                 console.error('❌ [RRWebVisualizer] Player initialization failed:', error);

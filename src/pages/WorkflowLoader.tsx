@@ -49,10 +49,7 @@ export default function WorkflowLoader() {
         let wf: any;
         if (isPublicWorkflow) {
           // Load public workflow by ID
-          wf = await workflowService.getPublicWorkflowById(workflowIdentifier);
-          console.log("📄 [WorkflowLoader] Public workflow loaded:", wf.name || wf.id, "steps:", wf.steps?.length);
-          console.log("📄 [WorkflowLoader] Workflow data:", { id: wf.id, owner_id: wf.owner_id, name: wf.name });
-          
+          wf = await workflowService.getPublicWorkflowById(workflowIdentifier);          
           // Check ownership for public workflow
           if (hasValidSessionToken(sessionToken) && wf.id) {
             try {
@@ -68,7 +65,6 @@ export default function WorkflowLoader() {
           
           setCurrentWorkflowData(wf, true); // Mark as public
           setDisplayMode('canvas');
-          console.log("📄 [WorkflowLoader] Set currentWorkflowData to public workflow:", wf.name || wf.id);
         } else {
           // Load private workflow by name (legacy behavior)
           const res = await workflowService.getWorkflowByName(workflowIdentifier);

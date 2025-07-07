@@ -331,31 +331,24 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   }, []);
 
   const executeWorkflow = useCallback(
-    async (workflowId: string, inputFields: z.infer<typeof inputFieldSchema>[], mode: 'cloud-run' | 'local-run' = 'cloud-run', visual: boolean = false) => {
-      if (!workflowId) return;
-      const missingInputs = inputFields.filter(
-        (field) => field.required && !field.value
-      );
-      if (missingInputs.length > 0) {
-        setWorkflowError(
-          `Missing required inputs: ${missingInputs
-            .map((f) => f.name)
-            .join(', ')}`
-        );
-        return;
-      }
-
-      // Check authentication before attempting execution
+    async (
+      workflowId: string,
+      inputFields: z.infer<typeof inputFieldSchema>[],
+      mode: 'cloud-run' | 'local-run' = 'cloud-run',
+      visual: boolean = false
+    ) => {
       if (!hasValidSessionToken(currentUserSessionToken)) {
-        setWorkflowError('Please login through the Chrome extension to execute workflows.');
-        setWorkflowStatus('failed');
+        toast({
+          title: 'Authentication Required',
+          description: 'Please login through the Chrome extension to execute workflows.',
+          variant: 'destructive',
+        });
         return;
       }
 
+      setWorkflowStatus('starting');
       setWorkflowError(null);
-      setCurrentTaskId(null);
-      setLogPosition(0);
-      setWorkflowStatus('idle');
+      setActiveDialog(null);
 
       try {
         // Show toast for visual mode
@@ -365,39 +358,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             description: `Starting ${mode === 'cloud-run' ? '☁️ cloud-run' : '🖥️ local-run'} execution with live browser view...`,
           });
         }
-        
-        // Use session token for execution with mode and visual
-        console.log('🚀 [AppContext] Starting workflow execution:', {
-          workflowId,
-          mode,
-          visual,
-          sessionToken: currentUserSessionToken ? `${currentUserSessionToken.slice(0,8)}...` : null,
-          inputFields: inputFields.length
-        });
 
         const result = await workflowService.executeWorkflow(
-          workflowId, 
-          inputFields, 
-          currentUserSessionToken!,  // We've already validated it's not null above
+          workflowId,
+          inputFields,
+          currentUserSessionToken!,
           mode,
           visual
         );
-        
-        console.log('🎯 [AppContext] Execution result:', result);
-        console.log('🎯 [AppContext] Backend success:', result.success);
-        console.log('🎯 [AppContext] Workflow name:', result.workflow);
-        console.log('🎯 [AppContext] Execution mode:', result.mode);
-        console.log('🎯 [AppContext] Visual mode requested:', visual);
-        console.log('🎯 [AppContext] Visual enabled in response:', result.visual_enabled);
-        console.log('🎯 [AppContext] Visual streaming enabled:', result.visual_streaming_enabled);
-        console.log('🎯 [AppContext] Session ID from backend:', result.session_id);
-        console.log('🎯 [AppContext] Task ID from backend:', result.task_id);
-        console.log('🎯 [AppContext] DevTools URL in response:', result.devtools_url);
-        
-        // Check if backend execution was successful
-        if (!result.success) {
-          throw new Error(result.message || 'Backend execution failed');
-        }
         
         setCurrentTaskId(result.task_id);
         setCurrentExecutionMode(mode);
@@ -413,90 +381,41 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             sessionToken: currentUserSessionToken,
             mode: mode,
             visual: true,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           };
           sessionStorage.setItem(`execution_params_${result.task_id}`, JSON.stringify(executionParams));
-          console.log(`💾 [AppContext] Stored execution params for task ${result.task_id}`);
         }
         
         // Handle visual mode - redirect to appropriate viewer based on streaming capability
         if (visual) {
-          console.log('🎬 [AppContext] Processing visual mode response:', {
-            visual_enabled: result.visual_enabled,
-            visual_streaming_enabled: result.visual_streaming_enabled,
-            session_id: result.session_id,
-            task_id: result.task_id
-          });
-
-          if (result.visual_enabled || result.visual_streaming_enabled) {
-            // ✅ UPDATED: Backend now returns proper session_id for visual streaming
-            // Use exact session_id from backend, fallback to visual-prefixed task_id if needed
-            const sessionId = result.session_id || `visual-${result.task_id}`;
-            const hasStreamingSupport = result.visual_streaming_enabled || false;
-            
-            console.log('✅ [AppContext] Workflow started with session ID:', sessionId);
-            console.log('✅ [AppContext] Session ID type:', typeof sessionId);
-            console.log('✅ [AppContext] Session ID length:', sessionId?.length);
-            console.log('✅ [AppContext] Raw result.session_id:', result.session_id);
-            console.log('✅ [AppContext] Raw result.task_id:', result.task_id);
-
-            
-            // Set overlay state
-            setCurrentStreamingSession(sessionId);
+          if (result.visual_streaming_enabled && result.session_id) {
+            // Visual streaming mode - use RRWebVisualizer
+            setCurrentStreamingSession(result.session_id);
             setOverlayWorkflowInfo({
               name: result.workflow,
               taskId: result.task_id,
-              mode: mode,
-              hasStreamingSupport: hasStreamingSupport
+              mode: result.mode,
+              hasStreamingSupport: true,
             });
-            
-            // Add delay to ensure backend has started the workflow
-            setTimeout(() => {
-              setVisualOverlayActive(true);
-            }, 2000); // 2 second delay
-            
-            // Show success notification with appropriate messaging
-            const streamingStatus = hasStreamingSupport ? 'rrweb live streaming' : 'visual mode (limited streaming)';
-            toast({
-              title: hasStreamingSupport ? 'Visual Streaming Activated' : 'Visual Mode Activated',
-              description: `${result.workflow} is running with ${mode === 'cloud-run' ? '☁️ cloud-run' : '🖥️ local-run'} ${streamingStatus}`,
-            });
+            setVisualOverlayActive(true);
+            setDisplayMode('canvas');
           } else if (result.visual_enabled && result.devtools_url) {
-            // Fallback to DevTools iframe viewer
-            console.log('✅ [AppContext] Opening DevTools viewer for task:', result.task_id);
-            console.log('✅ [AppContext] DevTools URL from backend:', result.devtools_url);
-            const devToolsUrl = `${window.location.origin}/devtools/${result.task_id}`;
-            window.open(devToolsUrl, '_blank', 'width=1200,height=800');
-            
-            // Show success notification
-            toast({
-              title: 'Visual Mode Activated',
-              description: `${result.workflow} is running with ${mode === 'cloud-run' ? '☁️ cloud-run' : '🖥️ local-run'} live browser view`,
-            });
-          } else if (result.visual_enabled) {
-            // Visual mode enabled but no specific URL - try DevTools viewer
-            console.log('⚠️ [AppContext] Visual enabled but no specific viewer URL, opening DevTools viewer');
-            const devToolsUrl = `${window.location.origin}/devtools/${result.task_id}`;
-            window.open(devToolsUrl, '_blank', 'width=1200,height=800');
+            // Traditional visual mode - use DevTools iframe
+            setDisplayMode('canvas');
+            // DevTools will handle the execution
           } else {
-            // Backend didn't enable visual mode
-            console.warn('❌ [AppContext] Visual mode requested but backend returned visual_enabled:', result.visual_enabled);
-            toast({
-              title: 'Visual Mode Not Available',
-              description: 'The backend did not enable visual mode for this execution.',
-            });
+            // Fallback to traditional execution
+            setDisplayMode('canvas');
           }
+        } else {
+          // Non-visual mode
+          setDisplayMode('canvas');
         }
-        
-        setDisplayMode('canvas');
         
         // Only start log polling for non-visual workflows
         // Visual streaming workflows handle their own status through RRWebVisualizer
         if (!visual || (!result.visual_enabled && !result.visual_streaming_enabled)) {
-          console.log('📊 [AppContext] Starting log polling for traditional execution');
           startPollingLogs(result.task_id);
-        } else {
-          console.log('📊 [AppContext] Skipping log polling - visual streaming handles its own status');
         }
       } catch (err) {
         console.error('Workflow execution failed:', err);

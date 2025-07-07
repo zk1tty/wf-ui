@@ -1,184 +1,76 @@
 /**
- * 🎨 RRWeb CSS Protection - Surgical CSS Filtering and Patching
- * 
- * This module provides surgical CSS protection for rrweb replay to prevent
- * "Regular expression too large" errors from sites like Amazon Prime Video.
- * 
- * Key Features:
- * - Surgical filtering of specific problematic CSS patterns
- * - Aggressive patching of rrweb's internal adaptCssForReplay function
- * - Safe string operations to avoid regex overflow
- * - Preserves normal CSS while removing dangerous patterns
+ * 🛡️ RRWeb CSS Protection System
+ * Prevents regex overflow errors from complex CSS in rrweb replay
  */
 
 /**
- * 🚨 CRITICAL: Aggressive patching of rrweb's internal adaptCssForReplay function
- * This prevents "Regular expression too large" errors from Amazon's massive CSS
+ * 🔧 Aggressive CSS Function Patching
+ * Patches rrweb's internal CSS processing functions to prevent regex overflow
  */
-export const patchRRWebCssProcessing = (rrwebInstance: any, iframeWindow: any) => {
-  console.log('🛡️ [CSS Protection] Starting aggressive rrweb CSS function patching...');
-  
-  try {
-    // 🎯 METHOD 1: Direct function replacement in iframe's rrweb instance
-    if (iframeWindow && iframeWindow.rrweb) {
-      const rrweb = iframeWindow.rrweb;
-      
-      // Try to find and patch adaptCssForReplay function directly
-      // It might be in various places in the rrweb object
-      const tryPatchFunction = (obj: any, path: string) => {
-        if (!obj) return false;
-        
-        for (const key in obj) {
-          try {
-            const value = obj[key];
-            
-            if (typeof value === 'function') {
-              const funcStr = value.toString();
-              
-              // Look for adaptCssForReplay function by its signature
-              if (funcStr.includes('adaptCssForReplay') || 
-                  (funcStr.includes('css') && funcStr.includes('replace') && funcStr.includes('url'))) {
-                console.log(`🎯 [CSS Patch] Found potential adaptCssForReplay at ${path}.${key}`);
-                
-                // Replace with safe version
-                const originalFunc = value;
-                obj[key] = function(...args: any[]) {
-                  try {
-                    // 🎯 SURGICAL: Filter only specific problematic CSS patterns
-                    const safeArgs = args.map(arg => {
-                      if (typeof arg === 'string' && arg.includes('PHN2ZyB3aWR0aD0"MTgiIGhlaWdodD0"MzIi')) {
-                        console.warn('🚨 [adaptCssForReplay] Amazon SVG pattern detected - applying surgical fix');
-                        // Use safe string operations instead of regex
-                        const startPattern = 'PHN2ZyB3aWR0aD0"MTgiIGhlaWdodD0"MzIi';
-                        let result = arg;
-                        let startIndex = 0;
-                        while ((startIndex = result.indexOf(startPattern, startIndex)) !== -1) {
-                          const endIndex = result.indexOf('"', startIndex + startPattern.length);
-                          if (endIndex !== -1) {
-                            result = result.substring(0, startIndex) + 'REMOVED_AMAZON_SVG' + result.substring(endIndex);
-                            startIndex += 'REMOVED_AMAZON_SVG'.length;
-                          } else {
-                            break;
-                          }
-                        }
-                        return result;
-                      }
-                      return arg;
-                    });
-                    
-                    return originalFunc.apply(this, safeArgs);
-                  } catch (error) {
-                    console.warn('🚨 [adaptCssForReplay] CSS processing failed, using fallback:', error);
-                    return '/* CSS processing failed - simplified */';
-                  }
-                };
-                
-                console.log(`✅ [CSS Patch] Patched function at ${path}.${key}`);
-                return true;
-              }
-            } else if (typeof value === 'object' && value !== null) {
-              // Recursively search in objects
-              if (tryPatchFunction(value, `${path}.${key}`)) {
-                return true;
-              }
-            }
-          } catch (e) {
-            // Skip problematic properties
-          }
-        }
-        return false;
-      };
-      
-      // Search for adaptCssForReplay in rrweb object
-      tryPatchFunction(rrweb, 'rrweb');
-    }
-    
-    // 🎯 METHOD 2: Global iframe function replacement via eval
-    if (iframeWindow) {
-      try {
-        // Inject our safe adaptCssForReplay function into the iframe
-        iframeWindow.eval(`
-          (function() {
-            // Find and replace adaptCssForReplay function globally
-            const originalReplace = String.prototype.replace;
-            
-            String.prototype.replace = function(searchValue, replaceValue) {
-              // 🎯 SURGICAL: Only target the specific Amazon SVG pattern that causes regex overflow
-              if (typeof searchValue !== 'string' && 
-                  this.includes('PHN2ZyB3aWR0aD0"MTgiIGhlaWdodD0"MzIi')) {
-                
-                console.warn('🚨 [String.replace] Specific Amazon SVG pattern detected - applying surgical fix');
-                // Use safe string operations instead of regex to avoid creating another regex overflow
-                const startPattern = 'PHN2ZyB3aWR0aD0"MTgiIGhlaWdodD0"MzIi';
-                let result = this.toString();
-                let startIndex = 0;
-                while ((startIndex = result.indexOf(startPattern, startIndex)) !== -1) {
-                  const endIndex = result.indexOf('"', startIndex + startPattern.length);
-                  if (endIndex !== -1) {
-                    result = result.substring(0, startIndex) + 'REMOVED_AMAZON_SVG' + result.substring(endIndex);
-                    startIndex += 'REMOVED_AMAZON_SVG'.length;
-                  } else {
-                    break;
-                  }
-                }
-                return result;
-              }
-              
-              try {
-                return originalReplace.call(this, searchValue, replaceValue);
-              } catch (error) {
-                const errorMsg = error instanceof Error ? error.message : String(error);
-                if (errorMsg.includes('Regular expression too large')) {
-                  console.warn('🚨 [String.replace] Regex overflow caught - using safe replacement');
-                  return '/* CSS content simplified due to regex overflow */';
-                }
-                throw error;
-              }
-            };
-            
-            console.log('✅ [CSS Protection] String.prototype.replace patched successfully');
-          })();
-        `);
-      } catch (evalError) {
-        console.warn('⚠️ [CSS Protection] Could not inject via eval:', evalError);
+export const patchRRWebCssProcessing = (rrweb: any): void => {
+  if (!rrweb) {
+    console.warn('⚠️ [CSS Protection] No rrweb instance provided for patching');
+    return;
+  }
+
+  // Patch String.prototype.replace to handle large regex patterns
+  const originalReplace = String.prototype.replace;
+  String.prototype.replace = function(searchValue: any, replaceValue: any): string {
+    try {
+      return originalReplace.call(this, searchValue, replaceValue);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      if (errorMsg.includes('Regular expression too large') || 
+          errorMsg.includes('Pattern too large') ||
+          errorMsg.includes('Regex overflow')) {
+        // Return original string for CSS regex overflow errors
+        return this.toString();
       }
+      throw error;
     }
-    
-    // 🎯 METHOD 3: Patch replayer methods that call adaptCssForReplay
-    if (rrwebInstance && rrwebInstance.rebuildFullSnapshot) {
-      const originalRebuildFullSnapshot = rrwebInstance.rebuildFullSnapshot;
-      
-      rrwebInstance.rebuildFullSnapshot = function(...args: any[]) {
-        console.log('🛡️ [CSS Protection] Intercepting rebuildFullSnapshot');
-        
+  };
+
+  // Patch rrweb's rebuildFullSnapshot method
+  if (rrweb.rebuildFullSnapshot) {
+    const originalRebuild = rrweb.rebuildFullSnapshot;
+    rrweb.rebuildFullSnapshot = function(...args: any[]) {
+      try {
+        return originalRebuild.apply(this, args);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        if (errorMsg.includes('Regular expression too large') || 
+            errorMsg.includes('adaptCssForReplay') ||
+            errorMsg.includes('Invalid regular expression')) {
+          console.warn('⚠️ [CSS Protection] CSS regex overflow in rebuildFullSnapshot - using fallback');
+          // Return a simplified snapshot without problematic CSS
+          return args[0]; // Return original snapshot
+        }
+        throw error;
+      }
+    };
+  }
+
+  // Patch any other CSS-related methods
+  const cssMethods = ['adaptCssForReplay', 'processCss', 'sanitizeCss'];
+  cssMethods.forEach(methodName => {
+    if (rrweb[methodName] && typeof rrweb[methodName] === 'function') {
+      const originalMethod = rrweb[methodName];
+      rrweb[methodName] = function(...args: any[]) {
         try {
-          // Pre-process any arguments that might contain CSS
-          const safeArgs = args.map(arg => {
-            if (typeof arg === 'object' && arg !== null) {
-              return filterCssInObject(arg);
-            }
-            return arg;
-          });
-          
-          return originalRebuildFullSnapshot.apply(this, safeArgs);
+          return originalMethod.apply(this, args);
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : String(error);
-          if (errorMsg.includes('Regular expression too large')) {
-            console.warn('🚨 [rebuildFullSnapshot] CSS regex overflow caught - skipping problematic content');
-            return; // Skip this rebuild to prevent crash
+          if (errorMsg.includes('Regular expression too large') || 
+              errorMsg.includes('Pattern too large') ||
+              errorMsg.includes('Regex overflow')) {
+            console.warn(`⚠️ [CSS Protection] CSS regex overflow in ${methodName} - using fallback`);
+            return args[0] || ''; // Return original or empty string
           }
           throw error;
         }
       };
-      
-      console.log('✅ [CSS Protection] rebuildFullSnapshot method patched');
     }
-    
-    console.log('✅ [CSS Protection] Aggressive rrweb patching completed');
-    
-  } catch (error) {
-    console.warn('⚠️ [CSS Protection] Aggressive patching failed:', error);
-  }
+  });
 };
 
 /**

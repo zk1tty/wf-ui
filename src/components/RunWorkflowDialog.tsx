@@ -119,13 +119,7 @@ export function RunWorkflowDialog() {
         throw new Error('Workflow ID or name not available');
       }
       
-      console.log('🚀 [RunWorkflowDialog] Executing workflow with parameters:', {
-        workflowId,
-        inputFields,
-        executionMode,
-        visualMode,
-        inputCount: inputFields.length
-      });
+          // Execute workflow with parameters
       
       await executeWorkflow(workflowId, inputFields, executionMode, visualMode);
       setActiveDialog(null);
