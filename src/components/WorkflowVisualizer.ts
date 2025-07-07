@@ -162,12 +162,10 @@ export class WorkflowVisualizer {
     // Reset duplicate event tracking for new session
     this.lastEventTimestamp = 0;
     this.duplicateEventCount = 0;
-    console.log('🔄 [WorkflowVisualizer] Initializing player for new session');
     
     // 🔄 Clear cached rrweb code to ensure we fetch the correct version
     this.rrwebCode = null;
     this.rrwebCSS = null;
-    console.log('🔄 [WorkflowVisualizer] Cleared cached rrweb code - will fetch fresh version 2.0.0-alpha.14');
     
     this.playerContainer = iframe;
     
@@ -183,15 +181,11 @@ export class WorkflowVisualizer {
         throw new Error('Iframe reference lost during async operation');
       }
       
-      console.log('🔄 [WorkflowVisualizer] Iframe verification passed');
-      
       // Use the current iframe reference
       this.playerContainer = currentIframe;
       
       // Step 3: Wait for replayer to be fully created before resolving
       await this.injectRRWebIntoIframe(currentIframe);
-      
-      console.log('✅ [WorkflowVisualizer] Player fully initialized and ready for WebSocket connection');
       
     } catch (error) {
       console.error('❌ [WorkflowVisualizer] Failed to initialize player:', error);
@@ -203,13 +197,31 @@ export class WorkflowVisualizer {
   // Step 2: Simplified message handling - official rrweb stream pattern
   private async handleMessage(event: MessageEvent): Promise<void> {
     try {
-      const data = JSON.parse(event.data);
+      let data: any;
       
-      // Handle different message types
-      if (data.type === 'rrweb_event' && data.event) {
-        const rrwebEvent = data.event;
+      // Handle both text and binary data formats
+      if (event.data instanceof Blob) {
+        // Convert Blob to text first, then parse as JSON
+        const text = await event.data.text();
+        data = JSON.parse(text);
+      } else if (typeof event.data === 'string') {
+        // Direct JSON parsing for text data
+        data = JSON.parse(event.data);
+      } else {
+        throw new Error('Unsupported message data type');
+      }
+      
+      // ✅ Backend EVENT VALIDATION: Validate exact rrweb structure, or ws message structure
+      if (this.isRRWebEventMessage(data)) {
+        // Validate event sequence
+        this.validateEventSequence(data.sequence_id);
         
-        // Process the rrweb event if we found one
+        // Update statistics
+        this.stats.eventsReceived++;
+        this.stats.bytesReceived += JSON.stringify(data).length;
+        
+        // Process the validated rrweb event
+        const rrwebEvent = data.event;
         if (rrwebEvent && typeof rrwebEvent.type === 'number') {
           try {
             this.addEventDirectly(rrwebEvent);
@@ -219,10 +231,16 @@ export class WorkflowVisualizer {
         } else {
           console.warn('⚠️ [WorkflowVisualizer] Invalid rrweb event format');
         }
+      } else if (data.type === 'connection_established') {
+        // Handle WebSocket connection establishment
+        this.handleConnectionEstablished(data);
       } else if (data.type === 'error') {
         this.handleBackendError(data);
       } else if (data.type === 'status') {
         this.handleBackendStatus(data);
+      } else {
+        // Log unknown message structure for debugging
+        this.logStructureValidation(data);
       }
       
       this.callbacks.onEvent(data);
@@ -231,6 +249,30 @@ export class WorkflowVisualizer {
       console.error('❌ [WorkflowVisualizer] Failed to handle message:', error);
       this.handleMessageError(error as Error, event.data);
     }
+  }
+
+  // 🔗 CONNECTION ESTABLISHMENT: Handle WebSocket connection confirmation
+  private handleConnectionEstablished(data: any): void {
+    const { client_id, session_id, timestamp } = data;
+    
+    console.debug('🔗 [WorkflowVisualizer] WebSocket connection established - \nClient ID:', client_id, '\nSession ID:', session_id, '\nTimestamp:', new Date(timestamp * 1000).toISOString());
+    
+    // Update session ID if not already set
+    if (!this.state.sessionId && session_id) {
+      this.state.sessionId = session_id;
+    }
+    
+    // Start statistics tracking
+    if (!this.stats.startTime) {
+      this.stats.startTime = Date.now();
+    }
+    
+    // Notify that connection is ready for events
+    this.callbacks.onEvent({
+      type: 'connection_ready',
+      sessionId: session_id,
+      clientId: client_id
+    });
   }
 
   // 🚨 BACKEND ERROR HANDLING: Handle new backend error types
@@ -349,12 +391,10 @@ export class WorkflowVisualizer {
     // 🔧 FIX: Only process events AFTER startLive() has been called
     if (this.state.replayer && !(this.state.replayer as any).__startLiveCalled) {
       if (event.type === 2 && typeof this.state.replayer.startLive === 'function') {
-        console.log('🎯 [WorkflowVisualizer] Full snapshot arrived - calling startLive() now!');
-        
+
         this.state.replayer.startLive();
         (this.state.replayer as any).__startLiveCalled = true;
         
-        console.log('✅ [WorkflowVisualizer] startLive() called - live mode activated!');
         // Continue to process this full snapshot event below
       } else {
         // Skip ALL events until we get the full snapshot - don't add to replayer
@@ -364,7 +404,7 @@ export class WorkflowVisualizer {
     }
 
     // Only reach here if startLive() has been called
-    console.log('🎯 [WorkflowVisualizer] Adding event to live replayer:', JSON.stringify({ 
+    console.debug('🎯 [WorkflowVisualizer] Adding event to live replayer:', JSON.stringify({ 
       type: event.type, 
       timestamp: event.timestamp,
       hasData: !!event.data,
@@ -428,7 +468,7 @@ export class WorkflowVisualizer {
     if (rrwebEvent.type === 3) {  // IncrementalSnapshot
       const source = rrwebEvent.data?.source;
       if (source === 0) {  // Mutation events (animations)
-        console.log('🎬 Animation event received:', JSON.stringify({
+        console.debug('🎬 Animation event received:', JSON.stringify({
           type: rrwebEvent.type,
           source: source,
           mutations: rrwebEvent.data?.mutations?.length || 0,
@@ -437,14 +477,14 @@ export class WorkflowVisualizer {
         
         // More detailed mutation logging
         if (rrwebEvent.data?.mutations?.length > 0) {
-          console.log('🎬 Animation mutation:', JSON.stringify({
+          console.debug('🎬 Animation mutation:', JSON.stringify({
             mutations: rrwebEvent.data.mutations.length,
             types: rrwebEvent.data.mutations.map((m: any) => m.type).slice(0, 5) // First 5 mutation types
           }));
         }
       } else {
         // Log all incremental events to see what we're getting
-        console.log('🔍 Incremental event (source=' + source + '):', JSON.stringify({
+        console.debug('🔍 Incremental event (source=' + source + '):', JSON.stringify({
           type: rrwebEvent.type,
           source: source,
           dataKeys: Object.keys(rrwebEvent.data || {}),
@@ -499,20 +539,12 @@ export class WorkflowVisualizer {
     return isValid;
   }
 
-  // 📋 STRUCTURE VALIDATION: Log detailed validation results for debugging
+  // 📋 STRUCTURE VALIDATION: Log unknown message structures for debugging
   private logStructureValidation(data: any): void {
-    console.log('🔍 [Structure Validation] Analyzing message structure:');
-    console.log('   • Type:', typeof data);
-    console.log('   • Is object:', typeof data === 'object' && data !== null);
-    console.log('   • Has session_id:', 'session_id' in data, typeof data.session_id);
-    console.log('   • Has timestamp:', 'timestamp' in data, typeof data.timestamp);
-    console.log('   • Has sequence_id:', 'sequence_id' in data, typeof data.sequence_id);
-    console.log('   • Has event:', 'event' in data, typeof data.event);
-    
-    if (data.event) {
-      console.log('   • Event type:', typeof data.event.type, data.event.type);
-      console.log('   • Event timestamp:', typeof data.event.timestamp, data.event.timestamp);
-    }
+    console.warn('⚠️ [Event Validation] Unknown message structure received');
+    console.log('🔍 [Message Type]:', typeof data);
+    console.log('🔍 [Message Keys]:', data && typeof data === 'object' ? Object.keys(data) : 'N/A');
+    console.log('🔍 [Message Data]:', data);
   }
 
 
@@ -549,11 +581,9 @@ export class WorkflowVisualizer {
       return;
     }
 
-    console.log('🎧 [WorkflowVisualizer] Setting up RRWeb event listeners...');
-
     // Critical events for debugging insertBefore errors
     this.state.replayer.on('fullsnapshot-rebuilded', (event: any) => {
-      console.log('📸 [RRWeb Event] Full snapshot rebuilded:', {
+      console.debug('📸 [RRWeb Event] Full snapshot rebuilded:', {
         timestamp: event.timestamp,
         type: event.type
       });
@@ -571,9 +601,9 @@ export class WorkflowVisualizer {
           const elementCount = iframeDoc.querySelectorAll('*').length;
           console.log('📊 [DOM Size]:', elementCount, 'elements');
           
-          if (elementCount < 20) {
-            console.warn('⚠️ [MINIMAL CONTENT] Very few elements detected - may not be capturing intended page');
-          }
+          // if (elementCount < 20) {
+          //   console.warn('⚠️ [MINIMAL CONTENT] Very few elements detected - may not be capturing intended page');
+          // }
         }
       } catch (error) {
         console.warn('Could not analyze recorded page:', error);
@@ -584,9 +614,7 @@ export class WorkflowVisualizer {
         try {
           const iframe = this.playerContainer as HTMLIFrameElement;
           const iframeDoc = iframe?.contentDocument;
-          if (iframeDoc) {
-            console.log('🎬 [Animation DEBUG] Analyzing all animation types in reconstructed DOM...');
-            
+          if (iframeDoc) {            
             // Check for ALL types of animations
             const allElements = iframeDoc.querySelectorAll('*');
             let animatedElements = 0;
@@ -595,8 +623,6 @@ export class WorkflowVisualizer {
             let videoElements = 0;
             let svgElements = 0;
             let transformElements = 0;
-            
-            console.log('🔍 [Animation DEBUG] Found element types:');
             const elementTypes = new Map();
             
             allElements.forEach((el: Element) => {
@@ -682,19 +708,17 @@ export class WorkflowVisualizer {
                 }
               }
             });
-            
-            console.log('📊 [Element Types]:', Array.from(elementTypes.entries()).sort((a, b) => b[1] - a[1]));
-            
+                        
             // 🔍 DEBUG: Show page content to understand what's being recorded
             const bodyElement = iframeDoc.body;
             const htmlContent = bodyElement ? bodyElement.innerHTML.substring(0, 500) : 'No body found';
-            console.log('📄 [Page Content Sample]:', htmlContent);
+            console.debug('📄 [Page Content Sample]:', htmlContent);
             
             const pageTitle = iframeDoc.title || 'No title';
             const pageUrl = (iframe.contentWindow as any)?.location?.href || 'No URL';
-            console.log('📋 [Page Info]:', { title: pageTitle, url: pageUrl });
+            console.debug('📋 [Page Info]:', { title: pageTitle, url: pageUrl });
             
-            console.log('🎬 [Animation Summary]:', {
+            console.debug('🎬 [Animation Summary]:', {
               totalElements: allElements.length,
               cssAnimatedElements: animatedElements,
               transformElements,
@@ -717,14 +741,14 @@ export class WorkflowVisualizer {
     });
 
     this.state.replayer.on('event-cast', (event: any) => {
-      console.log('🎬 [RRWeb Event] Event cast:', {
+      console.debug('🎬 [RRWeb Event] Event cast:', {
         type: event.type,
         timestamp: event.timestamp
       });
       
       // 🔧 ENHANCED: Track animation events in cast listener (per backend requirements)
       if (event.type === 3 && event.data?.source === 0) {
-        console.log('🎬 Animation event cast:', JSON.stringify({
+        console.debug('🎬 Animation event cast:', JSON.stringify({
           source: event.data.source,
           mutations: event.data.mutations?.length || 0
         }));
@@ -766,11 +790,7 @@ export class WorkflowVisualizer {
     this.state.replayer.on('skip-end', (payload: any) => {
       console.log('⏭️ [RRWeb Event] Finished skipping inactive time:', payload);
     });
-
-    console.log('✅ [WorkflowVisualizer] RRWeb event listeners configured');
   }
-
-
 
   // Step 1: Main Context Fetch - Official RRWeb Pattern (Puppeteer approach)
   private async fetchRRWebCode(): Promise<void> {
@@ -779,9 +799,6 @@ export class WorkflowVisualizer {
       console.log('✅ [WorkflowVisualizer] Using cached rrweb code and CSS');
       return;
     }
-
-    console.log('🌐 [WorkflowVisualizer] Fetching rrweb code and CSS from CDN (production-ready)...');
-
     try {
       // Try jsdelivr.net first (best CORS support) - using specific version 2.0.0-alpha.14
       try {
@@ -796,9 +813,7 @@ export class WorkflowVisualizer {
 
         this.rrwebCode = await jsResponse.text();
         this.rrwebCSS = await cssResponse.text();
-        
-        console.log(`✅ [WorkflowVisualizer] jsdelivr.net rrweb@2.0.0-alpha.14 fetched (JS: ${Math.round(this.rrwebCode.length / 1024)} KB, CSS: ${Math.round(this.rrwebCSS.length / 1024)} KB)`);
-        
+          
       } catch {
         console.warn('⚠️ [WorkflowVisualizer] jsdelivr.net failed, trying unpkg.com fallback...');
         
@@ -838,8 +853,6 @@ export class WorkflowVisualizer {
     if (!this.rrwebCSS || this.rrwebCSS.length < 100) {
       throw new Error('Fetched rrweb CSS appears to be invalid or too small');
     }
-
-    console.log('🎯 [WorkflowVisualizer] rrweb code and CSS validated and ready for injection');
   }
 
   // STEP 2: Wait for DOM attachment FIRST, then contentWindow
@@ -887,9 +900,7 @@ export class WorkflowVisualizer {
   }
 
     private async injectRRWebIntoIframe(iframe: HTMLIFrameElement): Promise<void> {
-    try {
-      console.log('🔍 [WorkflowVisualizer] Starting iframe injection...');
-      
+    try {      
       // Wait for iframe window to be available
       let iframeWindow = await this.waitForIframeWindow(iframe);
       
@@ -944,11 +955,8 @@ export class WorkflowVisualizer {
       
       // Official Puppeteer pattern adapted for browser - execute INSIDE iframe
       const injectionScript = `
-        (function(rrwebCode, rrwebCSS) {
-          console.log('🎯 [IframeContext] Starting rrweb injection from inside iframe...');
-          
+        (function(rrwebCode, rrwebCSS) {          
           // Add global media error handling inside iframe context
-          console.log('🎵 [IframeContext] Setting up iframe media error handlers...');
           
           // Override console.error to catch RRWeb media errors
           const originalConsoleError = console.error;
@@ -958,7 +966,6 @@ export class WorkflowVisualizer {
                 errorMsg.includes('AbortError') ||
                 errorMsg.includes('play() request was interrupted')) {
               console.warn('🎵 [IframeContext] Caught media error in iframe:', errorMsg);
-              console.log('🔧 [IframeContext] Media error suppressed - continuing RRWeb processing');
               return; // Don't log the error
             }
             // Log other errors normally
@@ -973,7 +980,6 @@ export class WorkflowVisualizer {
               event.message.includes('play() request was interrupted')
             )) {
               console.warn('🎵 [IframeContext] Caught global media error:', event.message);
-              console.log('🔧 [IframeContext] Preventing error propagation');
               event.preventDefault();
               event.stopPropagation();
               return false;
@@ -988,15 +994,12 @@ export class WorkflowVisualizer {
                   errorMsg.includes('media playback error') ||
                   errorMsg.includes('play() request was interrupted')) {
                 console.warn('🎵 [IframeContext] Caught unhandled media promise rejection:', errorMsg);
-                console.log('🔧 [IframeContext] Promise rejection handled');
                 event.preventDefault();
                 return false;
               }
             }
           });
-          
-          console.log('✅ [IframeContext] Iframe media error handlers configured');
-          
+                    
           // Helper to protect a single media element (defined first for reuse)
           function protectSingleMediaElement(element) {
             const originalPlay = element.play;
@@ -1069,20 +1072,16 @@ export class WorkflowVisualizer {
               
                              // Protect video and audio elements from rapid play/pause cycles
                if (tagName.toLowerCase() === 'video' || tagName.toLowerCase() === 'audio') {
-                 console.log('🎵 [IframeContext] Protecting newly created media element:', tagName);
                  protectSingleMediaElement(element);
                }
               
               return element;
             };
-            
-                         console.log('✅ [IframeContext] Media element protection configured');
-           }
+          }
            
            // Protect existing media elements in the DOM
            function protectExistingMediaElements() {
              const mediaElements = document.querySelectorAll('video, audio');
-             console.log('🎵 [IframeContext] Found ' + mediaElements.length + ' existing media elements to protect');
              mediaElements.forEach(protectSingleMediaElement);
            }
            
@@ -1095,13 +1094,11 @@ export class WorkflowVisualizer {
                      const element = node;
                      // Check if it's a media element
                      if (element.tagName === 'VIDEO' || element.tagName === 'AUDIO') {
-                       console.log('🎵 [IframeContext] Protecting dynamically added media element:', element.tagName);
                        protectSingleMediaElement(element);
                      }
                      // Check for media elements within added element
                      const mediaChildren = element.querySelectorAll && element.querySelectorAll('video, audio');
                      if (mediaChildren && mediaChildren.length > 0) {
-                       console.log('🎵 [IframeContext] Protecting ' + mediaChildren.length + ' media elements in added subtree');
                        mediaChildren.forEach(protectSingleMediaElement);
                      }
                    }
@@ -1112,9 +1109,7 @@ export class WorkflowVisualizer {
              observer.observe(document.body || document.documentElement, {
                childList: true,
                subtree: true
-             });
-             
-             console.log('✅ [IframeContext] Media mutation observer configured');
+             });             
            }
            
            
@@ -1131,9 +1126,7 @@ export class WorkflowVisualizer {
              setupMediaObserver();
            }
           
-          function loadCSS(cssCode) {
-            console.log('🎨 [IframeContext] Loading RRWeb CSS directly into iframe...');
-            
+          function loadCSS(cssCode) {            
             // Official RRWeb CSS injection pattern
             const styleEl = document.createElement('style');
             styleEl.type = 'text/css';
@@ -1141,16 +1134,13 @@ export class WorkflowVisualizer {
             
             if (document.head) {
               document.head.appendChild(styleEl);
-              console.log('✅ [IframeContext] RRWeb CSS injected directly to head');
             } else {
               // Fallback for timing issues
               requestAnimationFrame(() => {
                 if (document.head) {
                   document.head.appendChild(styleEl);
-                  console.log('✅ [IframeContext] RRWeb CSS injected via requestAnimationFrame');
                 } else {
                   document.documentElement.appendChild(styleEl);
-                  console.log('✅ [IframeContext] RRWeb CSS injected to documentElement');
                 }
               });
             }
@@ -1165,16 +1155,13 @@ export class WorkflowVisualizer {
             
             if (document.head) {
               document.head.append(s);
-              console.log('✅ [IframeContext] RRWeb JS injected directly to head');
             } else {
               // Puppeteer's requestAnimationFrame fallback for timing
               requestAnimationFrame(() => {
                 if (document.head) {
                   document.head.append(s);
-                  console.log('✅ [IframeContext] RRWeb JS injected via requestAnimationFrame');
                 } else {
                   document.documentElement.appendChild(s);
-                  console.log('✅ [IframeContext] RRWeb JS injected to documentElement');
                 }
               });
             }
@@ -1214,7 +1201,7 @@ export class WorkflowVisualizer {
       const iframeWindow = iframe.contentWindow;
       const iframeDoc = iframe.contentDocument;
       
-      console.log('🎬 [WorkflowVisualizer] Creating replayer...');
+      console.debug('🎬 [WorkflowVisualizer] Creating replayer...');
       
       if (!iframeWindow || !(iframeWindow as any).rrweb) {
         throw new Error('rrweb not available in iframe');
@@ -1235,9 +1222,6 @@ export class WorkflowVisualizer {
       const rrwebInstance = (iframeWindow as any).rrweb;
       const replayerConfig = getRRWebReplayerConfig(replayerContainer, useMinimalConfig, rrwebInstance);
       
-      console.log('🔍 [DEBUG] Config being passed to RRWeb constructor:', replayerConfig);
-      console.log('✅ [DEBUG] Using fix strategy config with patchRRWebCssProcessing protection');
-      
       this.state.replayer = new rrwebInstance.Replayer([], replayerConfig);
 
       // Add flag to track if startLive() has been called (for our fix)
@@ -1246,15 +1230,6 @@ export class WorkflowVisualizer {
       // 🚨 CRITICAL: Patch rrweb's internal CSS processing to prevent regex overflow
       patchRRWebCssProcessing(this.state.replayer, iframeWindow);
       console.log('✅ [CSS Protection] rrweb internal CSS processing patched');
-
-      // 🔍 CRITICAL: Verify we got the correct version and liveMode is working
-      console.log('🔍 [DEBUG] RRWeb replayer verification:');
-      console.log('  - Config passed:', replayerConfig);
-      console.log('  - Replayer instance keys:', Object.keys(this.state.replayer));
-      console.log('  - liveMode from replayer.liveMode:', this.state.replayer.liveMode);
-      console.log('  - liveMode from replayer.config:', this.state.replayer.config?.liveMode);
-      console.log('  - liveMode from replayer.options:', this.state.replayer.options?.liveMode);
-      console.log('  - startLive method available:', typeof this.state.replayer.startLive);
       
       // Detect actual loaded version
       const versionCheck = (iframeWindow as any).eval(`
@@ -1334,27 +1309,13 @@ export class WorkflowVisualizer {
         })()
       `);
       
-      console.log('🔍 [DEBUG] Version detection result:', versionCheck);
-      
-      // Check if we have the correct version (more lenient check)
-      if (versionCheck.detectedVersion && versionCheck.detectedVersion.includes('alpha.14')) {
-        console.log('✅ [DEBUG] Correct RRWeb version 2.0.0-alpha.14 confirmed!');
-      } else if (versionCheck.detectedVersion && versionCheck.detectedVersion.includes('alpha')) {
-        console.log('✅ [DEBUG] RRWeb alpha version detected:', versionCheck.detectedVersion);
-      } else if (versionCheck.hasLiveMode) {
-        console.log('✅ [DEBUG] Version detection unclear, but startLive() available - should work!');
-      } else {
-        console.warn('⚠️ [DEBUG] Version mismatch - expected alpha.14, got:', versionCheck.detectedVersion);
-      }
+      console.debug('🔍 [DEBUG] Version detection result:', versionCheck);
       
       if (!versionCheck.hasLiveMode) {
         console.error('❌ [DEBUG] startLive() method not available - this version does not support live mode!');
       } else {
         console.log('✅ [DEBUG] startLive() method available - live mode supported!');
       }
-
-      console.log('✅ [WorkflowVisualizer] RRWeb replayer instance created successfully');
-      console.log('💡 [WorkflowVisualizer] startLive() will be called when first event arrives');
 
       // 🔧 SANDBOX FIX: Monitor for RRWeb's internal iframe creation and fix sandbox
       const fixSandboxPermissions = () => {
@@ -1440,8 +1401,6 @@ export class WorkflowVisualizer {
         (iframeWindow as any).addEventListener('error', (event: ErrorEvent) => {
           if (event.message && event.message.includes('insertBefore')) {
             console.warn('🔧 [WorkflowVisualizer] Caught DOM insertBefore error in iframe:', event.message);
-            console.log('💡 [WorkflowVisualizer] This is usually caused by processing incremental events before full snapshot');
-            console.log('✅ [WorkflowVisualizer] Event buffering should prevent this in future');
             // Don't propagate - let rrweb continue processing other events
             event.preventDefault();
             return false;
@@ -1454,7 +1413,6 @@ export class WorkflowVisualizer {
             event.message.includes('media playback error')
           )) {
             console.warn('🎵 [WorkflowVisualizer] Caught media playback error in iframe:', event.message);
-            console.log('🔧 [WorkflowVisualizer] This is expected with live mode + media content - continuing...');
             // Don't propagate - this is expected with live streaming + media
             event.preventDefault();
             return false;

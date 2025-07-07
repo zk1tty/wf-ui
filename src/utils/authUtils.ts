@@ -3,6 +3,8 @@
  * Supports UUID-based ownership with NULL legacy workflows (Option B)
  */
 
+import { API_BASE_URL } from '@/lib/constants';
+
 export interface OwnershipCheckResponse {
   is_owner: boolean;
   owner_id: string | null;
@@ -19,8 +21,7 @@ export const checkWorkflowOwnership = async (
   workflowId: string
 ): Promise<boolean> => {
   try {
-    const API = import.meta.env.VITE_PUBLIC_API_URL;
-    const url = `${API}/workflows/${workflowId}/ownership?session_token=${encodeURIComponent(sessionToken)}`;
+    const url = `${API_BASE_URL}/workflows/${workflowId}/ownership?session_token=${encodeURIComponent(sessionToken)}`;
     
     const response = await fetch(url, {
       method: 'GET',
@@ -174,16 +175,14 @@ export const validateSessionToken = async (sessionToken: string): Promise<boolea
       return false;
     }
     
-    const API = import.meta.env.VITE_PUBLIC_API_URL;
-    
     // Safety check: Ensure API URL exists
-    if (!API) {
+    if (!API_BASE_URL) {
       console.error('❌ [Auth] API URL not configured');
       return false;
     }
 
     // Use a lightweight endpoint to validate the token
-    const url = `${API}/auth/validate?session_token=${encodeURIComponent(sessionToken)}`;
+    const url = `${API_BASE_URL}/auth/validate?session_token=${encodeURIComponent(sessionToken)}`;
     
     const response = await fetch(url, {
       method: 'GET',
