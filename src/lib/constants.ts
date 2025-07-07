@@ -12,15 +12,15 @@ export const IS_PRODUCTION = window.location.hostname !== 'localhost';
  * In production, use the backend API server URL
  */
 export const API_BASE_URL = import.meta.env.VITE_PUBLIC_API_URL || 
-  (IS_PRODUCTION ? 'https://api.rebrowse.me' : '');
+  (IS_PRODUCTION ? 'https://api.rebrowse.me' : 'http://localhost:8000');
 
 /**
  * WebSocket base URL - automatically switches between development and production
  * In development, use the frontend host (Vite will proxy to backend)
- * In production, use same host with proper protocol
+ * In production, use the backend API server with WebSocket protocol
  */
 export const WS_BASE_URL = IS_PRODUCTION ? 
-  `ws${window.location.protocol === 'https:' ? 's' : ''}://${window.location.host}` : 
+  `wss://api.rebrowse.me` : 
   `ws://${window.location.host}`;
 
 /**

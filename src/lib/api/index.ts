@@ -8,7 +8,15 @@ import { API_BASE_URL } from '@/lib/constants';
 const API = API_BASE_URL;
 const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
-console.log(`Auth check:\n✅ API: ${API || 'Using Vite proxy (empty for relative paths)'}\n✅ supabaseUrl: ${supabaseUrl}\n✅ supabaseAnonKey: ${supabaseAnonKey}`);
+
+// Helper function to mask sensitive data
+const maskSensitiveData = (data: string | undefined, length: number = 5): string => {
+  if (!data) return 'undefined';
+  return data.length > length ? `${data.substring(0, length)}...` : data;
+};
+
+console.log(`Auth check:\n✅ API: ${API || 'Using Vite proxy (empty for relative paths)'}\n✅ supabaseUrl: ${maskSensitiveData(supabaseUrl)}\n✅ supabaseAnonKey: ${maskSensitiveData(supabaseAnonKey)}`);
+
 // Initialize Supabase if URL and key are available (API can be empty for proxy)
 const supabase = supabaseUrl && supabaseAnonKey ? createSupabaseClient(supabaseUrl, supabaseAnonKey) : null;
 if (!supabase) {
