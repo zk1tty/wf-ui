@@ -31,12 +31,10 @@ export default defineConfig({
     },
   },
   define: {
-    // For local development: use frontend URL (proxy will route to backend)
-    // For production: use backend URL directly
+    // Use environment variable if set, otherwise use empty string for production (relative URLs)
+    // or localhost:5173 for development (proxy)
     'import.meta.env.VITE_PUBLIC_API_URL': JSON.stringify(
-      process.env.NODE_ENV === 'production' 
-        ? (process.env.VITE_PUBLIC_API_URL || 'http://localhost:8000')
-        : 'http://localhost:5173'
+      process.env.VITE_PUBLIC_API_URL || ''
     ),
   },
 });
