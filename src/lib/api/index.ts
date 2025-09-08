@@ -9,18 +9,15 @@ const API = API_BASE_URL;
 const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
 
-// Helper function to mask sensitive data
-const maskSensitiveData = (data: string | undefined, length: number = 5): string => {
-  if (!data) return 'undefined';
-  return data.length > length ? `${data.substring(0, length)}...` : data;
-};
-
-console.log(`Auth check:\n✅ API: ${API || 'Using Vite proxy (empty for relative paths)'}\n✅ supabaseUrl: ${maskSensitiveData(supabaseUrl)}\n✅ supabaseAnonKey: ${maskSensitiveData(supabaseAnonKey)}`);
+// Minimal validation for environment variables
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Missing Supabase environment variables (VITE_PUBLIC_SUPABASE_URL or VITE_PUBLIC_SUPABASE_ANON_KEY).');
+}
 
 // Initialize Supabase if URL and key are available (API can be empty for proxy)
 const supabase = supabaseUrl && supabaseAnonKey ? createSupabaseClient(supabaseUrl, supabaseAnonKey) : null;
 if (!supabase) {
-  console.error("❌ failed to init Supabase client. Please check your .env variables.");
+  console.error('❌ Failed to initialize Supabase client. Please check your .env variables.');
 }
 
 // Custom fetch function with auth headers
@@ -126,5 +123,8 @@ export async function sessionApiFetch<T>(
   
   return res.json() as Promise<T>;
 }
+
+// Export the supabase client for use in other files
+export { supabase };
 
 export default $api;
