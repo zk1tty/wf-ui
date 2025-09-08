@@ -28,6 +28,7 @@ export type SidebarStatus = 'loading' | 'ready' | 'error';
 export type EditorStatus = 'saved' | 'unsaved';
 export type WorkflowStatus =
   | 'idle'
+  | 'starting'
   | 'running'
   | 'failed'
   | 'cancelling'
@@ -99,6 +100,9 @@ interface AppContextType {
   setIsCurrentUserOwner: (isOwner: boolean) => void;
   refreshAuthenticationStatus: () => void;
   authRefreshTrigger: number;
+  anonymousUserId: string | null;
+  isAnonymousUser: boolean;
+  isInitializingAnonymous: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -147,6 +151,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [recordingData, setRecordingData] = useState<any>(null);
   const [authRefreshTrigger, setAuthRefreshTrigger] = useState<number>(0);
 
+  // Anonymous user support
+  const [anonymousUserId, setAnonymousUserId] = useState<string | null>(null);
+  const [isAnonymousUser, setIsAnonymousUser] = useState<boolean>(false);
+  const [isInitializingAnonymous, setIsInitializingAnonymous] = useState<boolean>(false);
+  const anonymousInitPromiseRef = useRef<Promise<string | null> | null>(null);
+
   // Visual Streaming Overlay States
   const [visualOverlayActive, setVisualOverlayActive] = useState(false);
   const [currentStreamingSession, setCurrentStreamingSession] = useState<string | null>(null);
@@ -189,14 +199,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const selectWorkflow = useCallback(
     (workflowName: string) => {
-      console.log("[selectWf] wfname:", workflowName);
+      
       if (checkForUnsavedChanges()) {
         return;
       }
-      console.log("[selectWf] workflows:", workflows);
-      console.log("[selectWf] obj:", Object.keys(workflows));
+      
       const wf = workflows.find((w) => w.name === workflowName);
-      console.log("[selectWf] wf:", wf);
+      
       if (wf) {
         setCurrentWorkflowData(wf, false); // Private workflows are not public
       } else {
@@ -337,15 +346,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       mode: 'cloud-run' | 'local-run' = 'cloud-run',
       visual: boolean = false
     ) => {
-      if (!hasValidSessionToken(currentUserSessionToken)) {
-        toast({
-          title: 'Authentication Required',
-          description: 'Please login through the Chrome extension to execute workflows.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
+      // Removed authentication check - always allow execution
+      
       setWorkflowStatus('starting');
       setWorkflowError(null);
       setActiveDialog(null);
@@ -358,11 +360,92 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             description: `Starting ${mode === 'cloud-run' ? '☁️ cloud-run' : '🖥️ local-run'} execution with live browser view...`,
           });
         }
+        
+        // Ensure-on-demand: make sure we have a session token before executing
+        const ensureAnonymousUser = async (): Promise<string | null> => {
+          if (hasValidSessionToken(currentUserSessionToken)) {
+            return currentUserSessionToken;
+          }
+          if (anonymousInitPromiseRef.current) {
+            return anonymousInitPromiseRef.current;
+          }
+          // Start a single in-flight initialization to avoid parallel calls
+          anonymousInitPromiseRef.current = (async () => {
+            setIsInitializingAnonymous(true);
+            try {
+              // Try to use existing Supabase client
+              let supabaseClient: any = null;
+              try {
+                const { supabase } = await import('@/lib/api');
+                supabaseClient = supabase;
+              } catch {
+                supabaseClient = null;
+              }
+
+              // 1) Check for existing session
+              if (supabaseClient) {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session?.access_token) {
+                  setCurrentUserSessionToken(session.access_token);
+                  return session.access_token;
+                }
+                // 2) Attempt anonymous sign-in
+                try {
+                  const { data, error } = await supabaseClient.auth.signInAnonymously();
+
+                  if (!error && data?.session?.access_token) {
+                    setAnonymousUserId(data.user?.id ?? null);
+                    setIsAnonymousUser(true);
+                    setCurrentUserSessionToken(data.session.access_token);
+                    return data.session.access_token;
+                  }
+                } catch {
+                  // ignore; we'll fall back to race guard
+                }
+              }
+
+              // 3) Race-condition guard: wait up to 10s for token to appear
+              const maxAttempts = 100;
+              let attempts = 0;
+              while (attempts < maxAttempts) {
+                // Try to read a fresh session directly from Supabase in case state lags
+                try {
+                  if (supabaseClient) {
+                    const { data: { session } } = await supabaseClient.auth.getSession();
+                    if (session?.access_token) {
+                      setCurrentUserSessionToken(session.access_token);
+                      return session.access_token;
+                    }
+                  }
+                } catch {
+                  // ignore and retry
+                }
+                // Fallback to state if already set
+                if (hasValidSessionToken(currentUserSessionToken)) {
+                  return currentUserSessionToken;
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+              }
+              return null;
+            } finally {
+              setIsInitializingAnonymous(false);
+            }
+          })();
+          try {
+            return await anonymousInitPromiseRef.current;
+          } finally {
+            anonymousInitPromiseRef.current = null;
+          }
+        };
+
+        // Non-blocking app start: we only ensure right before execution
+        const ensuredToken = await ensureAnonymousUser();
 
         const result = await workflowService.executeWorkflow(
           workflowId,
           inputFields,
-          currentUserSessionToken!,
+          (ensuredToken || currentUserSessionToken) || undefined, // Pass undefined instead of null
           mode,
           visual
         );
@@ -425,7 +508,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         
         if (err instanceof Error) {
           const errorText = err.message.toLowerCase();
-          
+
           // Handle authentication-related errors
           if (errorText.includes('jwt') || errorText.includes('session authentication') || errorText.includes('unauthorized')) {
             errorMessage = 'Please login through the Chrome extension to execute workflows.';
@@ -529,9 +612,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   }, [currentUserSessionToken, enhancedWorkflowService]);
 
-  useEffect(() => {
-    fetchWorkflows();
+  const refreshAuthenticationStatus = useCallback(() => {
+    setAuthRefreshTrigger(prev => prev + 1);
   }, []);
+
+  // Removed initializeAnonymousUser; handled on-demand in executeWorkflow
 
   // Poll for active executions every 5 seconds when authenticated
   useEffect(() => {
@@ -548,20 +633,16 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     return () => clearInterval(interval);
   }, [currentUserSessionToken, pollActiveExecutions]); // Added pollActiveExecutions to dependencies
 
+  // Removed eager anonymous initialization on app load; handled on-demand
+
   // Update enhanced service when session token changes
   useEffect(() => {
     enhancedWorkflowService.updateSessionToken(currentUserSessionToken);
   }, [currentUserSessionToken]);
 
-  const refreshAuthenticationStatus = useCallback(() => {
-    console.log('🔄 [AppContext] Refreshing authentication status across all components');
-    // Trigger a re-render of all components that depend on authentication state
-    setAuthRefreshTrigger(prev => prev + 1);
-    
-    // Also trigger a small delay to ensure state has propagated
-    setTimeout(() => {
-      console.log('🔄 [AppContext] Authentication refresh completed');
-    }, 100);
+  // Fetch workflows on app start
+  useEffect(() => {
+    fetchWorkflows();
   }, []);
 
   // Memoize context value to prevent unnecessary re-renders
@@ -612,7 +693,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     overlayWorkflowInfo,
     setVisualOverlayActive,
     setCurrentStreamingSession,
-    setOverlayWorkflowInfo
+    setOverlayWorkflowInfo,
+    anonymousUserId,
+    isAnonymousUser,
+    isInitializingAnonymous
   }), [
     selectWorkflow,
     displayMode,
@@ -660,7 +744,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     overlayWorkflowInfo,
     setVisualOverlayActive,
     setCurrentStreamingSession,
-    setOverlayWorkflowInfo
+    setOverlayWorkflowInfo,
+    anonymousUserId,
+    isAnonymousUser,
+    isInitializingAnonymous
   ]);
 
   return (

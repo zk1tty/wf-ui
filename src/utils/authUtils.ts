@@ -219,3 +219,30 @@ export const hasValidAndAuthenticatedSession = async (sessionToken: string | nul
   // Then validate with backend
   return await validateSessionToken(sessionToken!);
 }; 
+
+/**
+ * Check if current user is an anonymous user
+ */
+export const isAnonymousUser = async (): Promise<boolean> => {
+  try {
+    // Use the existing supabase client from api/index.ts
+    const { supabase } = await import('@/lib/api');
+    
+    if (!supabase) {
+      console.warn('Supabase not configured, cannot check anonymous status');
+      return false;
+    }
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.user) {
+      return false;
+    }
+    
+    // Check if user is anonymous based on JWT claims or user metadata
+    return session.user.is_anonymous === true;
+  } catch (error) {
+    console.error('Error checking anonymous user status:', error);
+    return false;
+  }
+}; 
