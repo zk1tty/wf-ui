@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Globe, Search, Plus, Loader, Workflow, HelpCircle, MessageCircle, MessageSquare } from 'lucide-react';
+import { Globe, Search, Video, Loader, Workflow, HelpCircle, MessageCircle, MessageSquare } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -208,7 +208,7 @@ export function WorkflowSidebar() {
             <p className={`text-sm ${
               theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
             }`}>
-              Start by creating or importing a workflow
+              Start by recording or importing a workflow
             </p>
           </div>
           <Button 
@@ -221,8 +221,8 @@ export function WorkflowSidebar() {
                 : 'border-gray-300 text-gray-600 hover:bg-gray-50'
             }`}
           >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Workflow
+            <Video className="w-4 h-4 mr-2" />
+            Record Workflow
           </Button>
         </div>
       );
@@ -384,7 +384,7 @@ export function WorkflowSidebar() {
                   ? 'bg-cyan-600 hover:bg-cyan-700' 
                   : 'bg-purple-600 hover:bg-purple-700'
               }`}
-              title={state === 'collapsed' ? 'Prompt New Workflow' : ''}
+              title={state === 'collapsed' ? 'Prompt Workflow' : ''}
             >
               {recordingStatus === 'recording' ? (
                 <>
@@ -394,7 +394,7 @@ export function WorkflowSidebar() {
               ) : (
                 <>
                   <MessageSquare className={`${state === 'collapsed' ? 'w-5 h-5' : 'w-4 h-4'} ${state !== 'collapsed' ? 'mr-2' : ''}`} />
-                  {state !== 'collapsed' && 'Prompt New Workflow'}
+                  {state !== 'collapsed' && 'Prompt Workflow'}
                 </>
               )}
             </Button>

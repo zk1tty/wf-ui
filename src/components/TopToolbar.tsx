@@ -308,26 +308,13 @@ export function TopToolbar() {
               className={`flex items-center gap-2 text-base px-6 py-3 disabled:opacity-50 ${
                 theme === 'dark' 
                   ? 'text-white border-gray-600 hover:bg-gray-800' 
-                  : 'text-white'
+                  : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200'
               }`}
               title={!canExecute ? 'Login required to execute workflows' : ''}
             >
               <Play className="w-5 h-5" />
               {!canExecute ? 'Run' : 'Run'}
             </Button>
-
-            {/* tempolary disabled Run as Tool
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handleRunAsTool}
-              disabled={!currentWorkflowData || workflowStatus === 'running' || !canExecute}
-              className="flex items-center gap-2 text-base px-6 py-3 disabled:opacity-50"
-              title={!canExecute ? 'Login required to execute workflows' : ''}
-            >
-              <Settings className="w-5 h-5" />
-              {!canExecute ? 'Login to Run' : 'Run as Tool'}
-            </Button> */}
 
             <Button
               variant="default"
