@@ -39,7 +39,7 @@ export function RunWorkflowDialog() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [executionMode, setExecutionMode] = useState<'cloud-run' | 'local-run'>('cloud-run');
   const [copied, setCopied] = useState(false);
-  const [visualMode, setVisualMode] = useState(false);
+  const [visualMode, setVisualMode] = useState(true);
   
   // Authentication is ensured on-demand before execution
 
@@ -185,50 +185,47 @@ export function RunWorkflowDialog() {
                   <div className="flex items-center space-x-2">
                     <Cloud className="h-4 w-4 text-blue-500" />
                     <span>Cloud Run</span>
-                    <span className="text-xs text-gray-500 ml-2">(Server - Fast & Headless)</span>
+                    <span className="text-xs text-gray-500 ml-2">(on Rebrowse Cloud)</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="local-run">
                   <div className="flex items-center space-x-2">
                     <Monitor className="h-4 w-4 text-green-500" />
                     <span>Local Run</span>
-                    <span className="text-xs text-gray-500 ml-2">(Your Browser - Visual)</span>
+                    <span className="text-xs text-gray-500 ml-2">(on Your Local Machine)</span>
                   </div>
                 </SelectItem>
               </SelectContent>
             </Select>
             <div className="text-xs text-gray-500">
-              {executionMode === 'cloud-run' ? (
-                <p>🌐 Runs on server with headless browser - fast execution, no local resources used.</p>
-              ) : (
+              {executionMode === 'local-run' && (
                 <div className="space-y-2">
-                  <p>🖥️ Runs on your local machine with visual browser - see what's happening.</p>
+                  <p>🖥️ Runs on your local machine - requires set-up.</p>
                   <div className="bg-gray-200 border border-gray-200 rounded-lg p-3 mt-2">
-                      <p className="text-gray-800 font-medium text-sm mb-2">📋 Local Setup</p>
-                      <p className="text-gray-700 text-xs mb-2">Copy and paste this command in your terminal:</p>
-                      <div className="relative">
-                        <div className="bg-gray-900 text-green-400 p-2 pr-12 rounded font-mono text-xs overflow-x-auto">
-                          <code>curl -LsSf https://script.rebrowse.me/install.sh | sh</code>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={copyInstallCommand}
-                          className="absolute right-1 top-1 h-8 w-8 p-0 hover:bg-gray-700"
-                          title="Copy command"
-                        >
-                          {copied ? (
-                            <Check className="h-3 w-3 text-green-400" />
-                          ) : (
-                            <Copy className="h-3 w-3 text-gray-400 hover:text-white" />
-                          )}
-                        </Button>
+                    <p className="text-gray-800 font-medium text-sm mb-2">📋 Local Setup</p>
+                    <p className="text-gray-700 text-xs mb-2">Open terminal and run this command:</p>
+                    <div className="relative">
+                      <div className="bg-gray-900 text-green-400 p-2 pr-12 rounded font-mono text-xs overflow-x-auto">
+                        <code>curl -LsSf https://script.rebrowse.me/install.sh | sh</code>
                       </div>
-                      <p className="text-gray-600 text-xs mt-2">This installs a chromium browser on your machine.</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={copyInstallCommand}
+                        className="absolute right-1 top-1 h-8 w-8 p-0 hover:bg-gray-700"
+                        title="Copy command"
+                      >
+                        {copied ? (
+                          <Check className="h-3 w-3 text-green-400" />
+                        ) : (
+                          <Copy className="h-3 w-3 text-gray-400 hover:text-white" />
+                        )}
+                      </Button>
                     </div>
+                  </div>
                 </div>
               )}
-                         </div>
+            </div>
            </div>
 
            {/* Visual Mode Toggle */}
@@ -237,7 +234,7 @@ export function RunWorkflowDialog() {
                <Eye className="h-4 w-4 text-gray-700" />
                <div>
                  <Label className="text-sm text-gray-900 font-medium">Visual Mode</Label>
-                 <p className="text-xs text-gray-600">Watch browser execution with streaming</p>
+                 <p className="text-xs text-gray-600">Watch browser execution in realtime</p>
                </div>
              </div>
              <Switch
