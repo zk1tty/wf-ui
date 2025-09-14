@@ -148,7 +148,7 @@ export function WorkflowSidebar() {
   };
 
   const handleTelegramClick = () => {
-    window.open('https://t.me/+yW_nr3UGA3o4ZGM9', '_blank');
+    window.open('https://t.me/rebrowser', '_blank');
     setShowHelpDialog(false);
     toast({
       title: 'Opening Telegram',
