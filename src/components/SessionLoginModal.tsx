@@ -137,7 +137,7 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
             <LogIn className={`h-5 w-5 ${
               theme === 'dark' ? 'text-blue-400' : 'text-blue-600'
             }`} />
-            <span>Login to Create Workflow</span>
+            <span>Login to Record Workflows</span>
           </DialogTitle>
           <DialogDescription className={
             theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
