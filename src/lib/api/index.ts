@@ -6,13 +6,26 @@ import { API_BASE_URL } from '@/lib/constants';
 
 // Use constants for API base URL (empty string for relative paths with Vite proxy in production)
 const API = API_BASE_URL;
-const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = (process.env as any).VITE_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = (process.env as any).VITE_PUBLIC_SUPABASE_ANON_KEY;
 
 // Minimal validation for environment variables
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Missing Supabase environment variables (VITE_PUBLIC_SUPABASE_URL or VITE_PUBLIC_SUPABASE_ANON_KEY).');
 }
+
+// Debug: Verify env visibility (masked key)
+try {
+  // Only log in browser context to help diagnose runtime env loading
+  if (typeof window !== 'undefined') {
+    // eslint-disable-next-line no-console
+    console.info('[Supabase Env]', {
+      url: supabaseUrl,
+      anonKeyPrefix: supabaseAnonKey ? `${supabaseAnonKey.slice(0, 8)}...` : null,
+      anonKeyLength: supabaseAnonKey ? supabaseAnonKey.length : 0,
+    });
+  }
+} catch {}
 
 // Initialize Supabase if URL and key are available (API can be empty for proxy)
 const supabase = supabaseUrl && supabaseAnonKey ? createSupabaseClient(supabaseUrl, supabaseAnonKey) : null;

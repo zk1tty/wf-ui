@@ -391,13 +391,24 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
                 }
                 // 2) Attempt anonymous sign-in
                 try {
+                  console.info('[Auth] Attempting anonymous sign-in...');
                   const { data, error } = await supabaseClient.auth.signInAnonymously();
 
                   if (!error && data?.session?.access_token) {
+                    console.info('[Auth] Anonymous sign-in succeeded. User is anonymous:', data.user?.is_anonymous === true);
                     setAnonymousUserId(data.user?.id ?? null);
                     setIsAnonymousUser(true);
                     setCurrentUserSessionToken(data.session.access_token);
                     return data.session.access_token;
+                  }
+                  if (error) {
+                    // Log detailed error information to diagnose 401s
+                    console.error('[Auth] Anonymous sign-in failed:', {
+                      name: (error as any)?.name,
+                      message: (error as any)?.message,
+                      status: (error as any)?.status,
+                      code: (error as any)?.code,
+                    });
                   }
                 } catch {
                   // ignore; we'll fall back to race guard
@@ -441,6 +452,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
         // Non-blocking app start: we only ensure right before execution
         const ensuredToken = await ensureAnonymousUser();
+        console.log('Anonymous token:', ensuredToken);
+        console.log('Current user session token:', currentUserSessionToken);
 
         const result = await workflowService.executeWorkflow(
           workflowId,
