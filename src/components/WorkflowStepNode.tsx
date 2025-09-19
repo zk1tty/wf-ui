@@ -1,14 +1,15 @@
 import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import {
-  MousePointer,
+  MousePointerClick,
   Type,
   Navigation,
   Clock,
   Info,
   FileSearch,
   Copy,
-  Clipboard,
+  ClipboardPaste,
+  ClipboardCopy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -23,7 +24,8 @@ interface WorkflowStepNodeData {
     | 'agent'
     | 'key_press'
     | 'clipboard_copy'
-    | 'clipboard_paste';
+    | 'clipboard_paste'
+    | 'click_to_copy';
   target: string;
   value?: string;
   stepNumber: number;
@@ -35,14 +37,15 @@ interface WorkflowStepNodeProps {
 }
 
 const actionIcons = {
-  click: MousePointer,
+  click: MousePointerClick,
   input: Type,
   navigation: Navigation,
   key_press: Clock,
   agent: Info,
   select_change: FileSearch,
   clipboard_copy: Copy,
-  clipboard_paste: Clipboard,
+  clipboard_paste: ClipboardPaste,
+  click_to_copy: ClipboardCopy,
 };
 
 const actionColors = {
@@ -54,6 +57,7 @@ const actionColors = {
   select_change: 'bg-cyan-500',
   clipboard_copy: 'bg-orange-500',
   clipboard_paste: 'bg-pink-500',
+  click_to_copy: 'bg-indigo-500',
 };
 
 export const WorkflowStepNode = memo(

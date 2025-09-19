@@ -74,6 +74,8 @@ class WorkflowServiceImpl implements WorkflowService {
         ...(step.selectedText !== undefined && { selectedText: step.selectedText }),
         ...(step.value !== undefined && { value: step.value }),
         ...(step.task !== undefined && { task: step.task }),
+        ...(step.content !== undefined && { content: step.content }),
+        ...(step.timeoutMs !== undefined && { timeoutMs: step.timeoutMs }),
       })) || [],
       // Normalize input_schema to ensure required field is always boolean
       input_schema: workflow.input_schema?.map((input: any) => ({
