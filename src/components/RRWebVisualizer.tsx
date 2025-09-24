@@ -294,7 +294,7 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
       <div className="h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-500" />
-          <p className="text-gray-600">Loading rrweb visual streaming...</p>
+          <p className="text-gray-600">Loading visual mode...</p>
         </div>
       </div>
     );
@@ -402,9 +402,9 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
               <div className="absolute inset-0 flex items-center justify-center z-10 bg-white bg-opacity-90">
                 <div className="text-center text-gray-600">
                   <div className="text-2xl mb-2">🎥</div>
-                  <div>Initializing visual streaming...</div>
+                  <div>Initializing visual mode...</div>
                   <div className="text-xs mt-2 text-gray-500">
-                    Live mode will activate when first event arrives
+                    View mode will activate when first event arrives
                   </div>
                 </div>
               </div>

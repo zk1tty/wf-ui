@@ -12,7 +12,7 @@ export const IS_PRODUCTION = window.location.hostname !== 'localhost';
  * In production, use the backend API server URL
  */
 export const API_BASE_URL = import.meta.env.VITE_PUBLIC_API_URL || 
-  (IS_PRODUCTION ? 'https://api.rebrowse.me' : 'http://localhost:8000');
+  (IS_PRODUCTION ? 'https://api.rebrowse.me' : 'http://127.0.0.1:8000');
 
 /**
  * WebSocket base URL - automatically switches between development and production
