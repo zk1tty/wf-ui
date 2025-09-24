@@ -92,6 +92,19 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
     }
   };
 
+  const handleOpenChromeExtensions = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    const url = 'chrome://extensions';
+    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!newWindow) {
+      toast({
+        title: 'Popup blocked',
+        description: 'Please open chrome://extensions manually from your browser.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleGetExtension = () => {
     // Try multiple approaches for downloading the extension
     try {
@@ -250,14 +263,17 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
           }`}>
             <h4 className={`font-medium mb-2 ${
               theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>How to get your session token:</h4>
+            }`}>How to Login:</h4>
             <ol className={`text-sm space-y-1 list-decimal list-inside ${
               theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
             }`}>
-              <li>Install and open the Chrome extension</li>
-              <li>Login to your Google account</li>
-              <li>Click key icon on top right corner</li>
-              <li>Copy and paste the key above</li>
+              <li>Click Install buttton above.</li>
+              <li>
+                Go to <a href="chrome://extensions" target="_blank" rel="noopener noreferrer" onClick={handleOpenChromeExtensions} className={theme === 'dark' ? 'text-blue-400 underline underline-offset-2' : 'text-blue-600 underline underline-offset-2 hover:text-blue-800'}>chrome://extensions</a>
+              </li>
+              <li>Go to "Load unpacked"</li>
+              <li>Select the folder where you downloaded.</li>
+              <li>Go to Login app</li>
             </ol>
           </div>
         </div>
