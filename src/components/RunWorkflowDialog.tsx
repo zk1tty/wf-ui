@@ -233,8 +233,8 @@ export function RunWorkflowDialog() {
              <div className="flex items-center space-x-2">
                <Eye className="h-4 w-4 text-gray-700" />
                <div>
-                 <Label className="text-sm text-gray-900 font-medium">Visual Mode</Label>
-                 <p className="text-xs text-gray-600">Watch browser execution in realtime</p>
+                 <Label className="text-sm text-gray-900 font-medium">View Mode</Label>
+                 <p className="text-xs text-gray-600">Watch AI browsing in realtime</p>
                </div>
              </div>
              <Switch
@@ -245,7 +245,7 @@ export function RunWorkflowDialog() {
            </div>
            
            <p className="text-gray-600">
-             Configure the input values for this workflow execution:
+             Configure the input variables:
            </p>
 
           <div className="space-y-4">
@@ -319,10 +319,7 @@ export function RunWorkflowDialog() {
                 ) : (
                   <Monitor className="w-4 h-4" />
                 )}
-                {visualMode 
-                  ? `Visual ${executionMode === 'cloud-run' ? 'Cloud' : 'Local'} Run`
-                  : executionMode === 'cloud-run' ? 'Cloud Run' : 'Local Run'
-                }
+                {executionMode === 'cloud-run' ? 'Cloud Run' : 'Local Run'}
               </>
             )}
           </Button>

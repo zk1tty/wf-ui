@@ -17,11 +17,13 @@ import { FrontendScreensaver } from './FrontendScreensaver';
 interface RRWebVisualizerProps {
   sessionId?: string;
   onClose?: () => void;
+  onCompleted?: () => void;
 }
 
 const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({ 
   sessionId: propSessionId, 
-  onClose 
+  onClose,
+  onCompleted
 }: RRWebVisualizerProps) {
   const { sessionId: urlSessionId } = useParams<{ sessionId: string }>();
   const sessionId = propSessionId || urlSessionId;
@@ -178,8 +180,12 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
         },
         onDisconnect: (event: CloseEvent) => {
           setConnectionStatus('disconnected');
-                if (event.code === 1000 && onClose) {
-                  setTimeout(onClose, 3000); // Auto-close on completion
+          if (event.code === 1000) {
+            if (onCompleted) {
+              setTimeout(onCompleted, 3000);
+            } else if (onClose) {
+              setTimeout(onClose, 3000);
+            }
           }
         },
         onEvent: (data: any) => {
@@ -253,12 +259,26 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
       // Direct connection (official rrweb stream pattern)
       await visualizerRef.current.connectToStream(sessionId);
       
+      // Fallback: if no FullSnapshot arrives in time (completed session), render cached snapshot
+      setTimeout(() => {
+        if (!hasRealContent && visualizerRef.current) {
+          const rendered = visualizerRef.current.renderCachedSnapshot(sessionId);
+          if (rendered) {
+            setHasRealContent(true);
+            addLog('🖼️ Rendered cached snapshot (session may be completed)', 'success');
+          } else {
+            addLog('⏳ Still waiting for FullSnapshot...', 'info');
+            // Keep waiting quietly; user can retry
+          }
+        }
+      }, 3000);
+      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       addLog(`❌ Connection failed: ${errorMessage}`, 'error');
       setConnectionStatus('error');
     }
-  }, [sessionId, addLog]);
+  }, [sessionId, addLog, hasRealContent]);
 
   // Utility functions
   const getStatusIcon = () => {

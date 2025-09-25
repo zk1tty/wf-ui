@@ -10,12 +10,23 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { LogViewer } from '@/components/LogViewer';
 import { Welcome } from '@/components/Welcome';
-import { Loader2, Terminal, ChevronRight, ChevronLeft, GripVertical, Footprints } from 'lucide-react';
+import { Loader2, Terminal, ChevronRight, ChevronLeft, GripVertical, Footprints, Eye, EyeOff, XCircle } from 'lucide-react';
+import { useAppContext as useAppContextRaw } from '@/contexts/AppContext';
+import { sessionApiFetch, apiFetch } from '@/lib/api';
 
 const Index2 = () => {
-  const { displayMode, workflowStatus, currentWorkflowData } = useAppContext();
+  const { 
+    displayMode, 
+    workflowStatus, 
+    currentWorkflowData,
+    visualOverlayActive,
+    setVisualOverlayActive,
+    currentStreamingSession,
+    overlayWorkflowInfo
+  } = useAppContext();
   const { theme } = useTheme();
   const [showLogViewer, setShowLogViewer] = useState(false);
+  const { currentUserSessionToken } = useAppContextRaw();
   
   // Initialize with stored width or default
   const [logPanelWidth, setLogPanelWidth] = useState(() => {
@@ -135,6 +146,59 @@ const Index2 = () => {
                           <span>{currentWorkflowData.steps?.length || 0}</span>
                           <Footprints className="w-3 h-3" />
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => setVisualOverlayActive(!visualOverlayActive)}
+                          disabled={!currentStreamingSession || !overlayWorkflowInfo}
+                          title={visualOverlayActive ? 'Hide visual overlay' : (currentStreamingSession ? 'Show visual overlay' : 'No active visual session')}
+                          aria-label={visualOverlayActive ? 'Hide visual overlay' : 'Show visual overlay'}
+                          className={`justify-center whitespace-nowrap font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 border bg-background hover:text-accent-foreground h-11 rounded-md flex items-center gap-2 text-base px-6 py-3 disabled:opacity-50 text-white border-gray-600 hover:bg-gray-800 ${
+                            (!currentStreamingSession || !overlayWorkflowInfo)
+                              ? 'cursor-not-allowed'
+                              : 'cursor-pointer'
+                          }`}
+                        >
+                          {visualOverlayActive ? (
+                            <EyeOff className="w-6 h-6" />
+                          ) : (
+                            <Eye className="w-6 h-6" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              // Resolve active execution ID
+                              let executionId: string | null = null;
+                              if (currentUserSessionToken !== null && currentUserSessionToken !== undefined) {
+                                const response = await apiFetch<{ active_executions: Record<string, any> }>(
+                                  `/workflows/executions/active?session_token=${currentUserSessionToken}`,
+                                  { auth: false }
+                                );
+                                const entries = Object.entries(((response as any)?.active_executions ?? {}) as Record<string, any>);
+                                if (entries.length > 0) {
+                                  const firstEntry = entries[0] as [string, any] | undefined;
+                                  if (firstEntry && firstEntry[0]) {
+                                    executionId = String(firstEntry[0]);
+                                  }
+                                }
+                              }
+                              if (!executionId) return;
+                              const body = { mode: 'stop_then_kill' as const, timeout_ms: 5000, reason: 'user_requested_stop' };
+                              await sessionApiFetch<any>(`/workflows/executions/${executionId}/terminate`, {
+                                sessionToken: currentUserSessionToken || undefined,
+                                body: JSON.stringify(body)
+                              });
+                            } catch (e) {
+                              // Silent fail on UI button
+                            }
+                          }}
+                          disabled={!currentStreamingSession || !overlayWorkflowInfo}
+                          title="Terminate this execution"
+                          className="justify-center whitespace-nowrap font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 border bg-background h-11 rounded-md flex items-center gap-2 text-base px-4 py-3 text-white border-gray-600 hover:bg-gray-800"
+                        >
+                          <XCircle className="w-5 h-5 text-red-600" />
+                        </button>
                       </div>
                     </div>
                   </div>

@@ -53,13 +53,15 @@ interface AppContextType {
   sidebarStatus: SidebarStatus;
   editorStatus: EditorStatus;
   setEditorStatus: (status: EditorStatus) => void;
+  // Allow external components (e.g., overlay wrapper) to set workflow status
+  setWorkflowAppStatus: (status: WorkflowStatus) => void;
   currentWorkflowData: Workflow | null;
   isCurrentWorkflowPublic: boolean;
   currentUserSessionToken: string | null;
   isCurrentUserOwner: boolean;
   workflows: EnhancedWorkflow[];
   activeExecutions: Record<string, ActiveExecution>;
-  // Visual Streaming Overlay States
+  // VIew Mode Overlay States
   visualOverlayActive: boolean;
   currentStreamingSession: string | null;
   overlayWorkflowInfo: {
@@ -157,7 +159,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [isInitializingAnonymous, setIsInitializingAnonymous] = useState<boolean>(false);
   const anonymousInitPromiseRef = useRef<Promise<string | null> | null>(null);
 
-  // Visual Streaming Overlay States
+  // View Mode Overlay States
   const [visualOverlayActive, setVisualOverlayActive] = useState(false);
   const [currentStreamingSession, setCurrentStreamingSession] = useState<string | null>(null);
   const [overlayWorkflowInfo, setOverlayWorkflowInfo] = useState<{
@@ -167,12 +169,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     hasStreamingSupport?: boolean;
   } | null>(null);
 
-
-
   // Wrapper function to handle both workflow data and public flag
   const setCurrentWorkflowData = useCallback((workflow: Workflow | null, isPublic: boolean = false) => {
     setCurrentWorkflowDataState(workflow);
     setIsCurrentWorkflowPublic(isPublic);
+  }, []);
+
+  // Expose safe workflow status setter for external events (e.g., visual completion)
+  const setWorkflowAppStatus = useCallback((status: WorkflowStatus) => {
+    setWorkflowStatus(status);
   }, []);
 
   const checkForUnsavedChanges = useCallback(() => {
@@ -687,6 +692,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     sidebarStatus,
     editorStatus,
     setEditorStatus,
+    setWorkflowAppStatus,
     checkForUnsavedChanges,
     recordingStatus,
     setRecordingStatus,
@@ -738,6 +744,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     sidebarStatus,
     editorStatus,
     setEditorStatus,
+    setWorkflowAppStatus,
     checkForUnsavedChanges,
     recordingStatus,
     setRecordingStatus,

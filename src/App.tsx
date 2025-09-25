@@ -37,7 +37,8 @@ const ExtensionIntegrationWrapper: React.FC<{ children: React.ReactNode }> = ({ 
   );
 };
 
-// Overlay Wrapper Component (inside AppProvider) - FIXED: Memoized to prevent infinite re-renders
+// Visual View Overlay Wrapper Component (inside AppProvider) 
+// FIXED: Memoized to prevent infinite re-renders
 const OverlayWrapperComponent = memo<{ children: React.ReactNode }>(({ children }) => {
   const { 
     visualOverlayActive, 
@@ -45,16 +46,26 @@ const OverlayWrapperComponent = memo<{ children: React.ReactNode }>(({ children 
     overlayWorkflowInfo,
     setVisualOverlayActive,
     setCurrentStreamingSession,
-    setOverlayWorkflowInfo
+    setOverlayWorkflowInfo,
+    setWorkflowAppStatus
   } = useAppContext();
 
   // FIXED: Memoize the callback to prevent recreation on every render
+  // Manual close should NOT clear session; allow reopening during execution
   const handleOverlayClose = useCallback(() => {
-    console.log('🚪 [OverlayWrapper] Closing visual overlay...');
+    console.log('🚪 [OverlayWrapper] Closing visual overlay (manual)...');
+    setVisualOverlayActive(false);
+  }, [setVisualOverlayActive]);
+
+  // On completion, close and clear session after TTL
+  const handleOverlayCompleted = useCallback(() => {
+    console.log('✅ [OverlayWrapper] Visual session completed. Starting TTL retention.');
     setVisualOverlayActive(false);
     setCurrentStreamingSession(null);
     setOverlayWorkflowInfo(null);
-  }, [setVisualOverlayActive, setCurrentStreamingSession, setOverlayWorkflowInfo]);
+    // Mark workflow as completed so RUN becomes available again
+    setWorkflowAppStatus('completed');
+  }, [setVisualOverlayActive, setCurrentStreamingSession, setOverlayWorkflowInfo, setWorkflowAppStatus]);
 
   return (
     <>
@@ -65,6 +76,7 @@ const OverlayWrapperComponent = memo<{ children: React.ReactNode }>(({ children 
           workflowInfo={overlayWorkflowInfo}
           isOpen={visualOverlayActive}
           onClose={handleOverlayClose}
+          onCompleted={handleOverlayCompleted}
         />
       )}
     </>
