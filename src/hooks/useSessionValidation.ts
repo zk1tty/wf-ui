@@ -112,6 +112,13 @@ export const useSessionValidation = (intervalMs: number = 60000) => {
     return () => clearInterval(interval);
   }, [validateSession, intervalMs]);
 
+  // Re-validate immediately when the session token changes to keep UI in sync
+  useEffect(() => {
+    // Trigger a fresh validation when token presence/value changes
+    // This avoids showing stale states like "Session Expired" right after login
+    validateSession();
+  }, [currentUserSessionToken]);
+
   // Manual validation function
   const checkSession = useCallback(async (): Promise<boolean> => {
     return await validateSession();
