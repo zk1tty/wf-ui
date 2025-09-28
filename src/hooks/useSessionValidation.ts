@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   getStoredSessionToken, 
-  validateSessionToken, 
-  clearStoredAuth,
+  validateSessionToken,
   hasValidSessionToken 
 } from '@/utils/authUtils';
 import { useAppContext } from '@/contexts/AppContext';
@@ -42,6 +41,19 @@ export const useSessionValidation = (intervalMs: number = 60000) => {
       const tokenToValidate = storedToken;
       
       if (!hasValidSessionToken(tokenToValidate)) {
+        // If no stored token but context has a token, treat it as an anonymous session
+        if (hasValidSessionToken(contextToken) && !storedToken) {
+          setState(prev => ({
+            ...prev,
+            isValid: true,
+            isChecking: false,
+            lastChecked: new Date(),
+            error: null
+          }));
+          return true;
+        }
+
+        // No tokens present at all
         setState(prev => ({
           ...prev,
           isValid: false,
@@ -49,12 +61,6 @@ export const useSessionValidation = (intervalMs: number = 60000) => {
           lastChecked: new Date(),
           error: 'No session token found'
         }));
-        
-        // Clear context if it has a token but storage doesn't
-        if (contextToken && !storedToken) {
-          setCurrentUserSessionToken(null);
-        }
-        
         return false;
       }
 

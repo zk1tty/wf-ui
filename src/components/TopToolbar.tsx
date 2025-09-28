@@ -1,23 +1,15 @@
 import { 
   Play, 
-  Settings, 
   Edit3, 
   Blocks, 
   SidebarOpen, 
-  Terminal, 
   Palette, 
   LogIn, 
-  LogOut,
   Moon, 
   Sun, 
-  Link, 
   ExternalLink,
-  CheckCircle,
   AlertTriangle,
   Loader2,
-  UserCheck,
-  RefreshCw,
-  User,
   BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,7 +17,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAppContext } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useEffect, useState } from 'react';
-import { hasValidSessionToken, canEditWorkflow, clearStoredAuth } from '@/utils/authUtils';
+import { hasValidSessionToken, canEditWorkflow } from '@/utils/authUtils';
 import { useSessionValidation } from '@/hooks/useSessionValidation';
 import SessionLoginModal from '@/components/SessionLoginModal';
 import SessionStatus from '@/components/SessionStatus';
@@ -44,8 +36,8 @@ export function TopToolbar() {
     currentUserSessionToken,
     isCurrentUserOwner,
     isCurrentWorkflowPublic,
-    authRefreshTrigger,
-    setCurrentUserSessionToken
+    // authRefreshTrigger,
+    // setCurrentUserSessionToken
   } = useAppContext();
   
   const { theme, toggleTheme } = useTheme();
@@ -54,7 +46,7 @@ export function TopToolbar() {
   const [showUserConsole, setShowUserConsole] = useState(false);
   
   // Use the new session validation hook for real-time authentication status
-  const { isValid: hasValidSession, isChecking: isValidatingSession, error: sessionError } = useSessionValidation(30000);
+  const { isValid: hasValidSession, isChecking: isValidatingSession } = useSessionValidation(30000);
   
   // For backward compatibility, also check the stored token
   const hasSessionToken = hasValidSessionToken(currentUserSessionToken) && hasValidSession;
@@ -68,14 +60,14 @@ export function TopToolbar() {
   const canExecute = hasSessionToken || isCurrentWorkflowPublic;
 
   // Handle logout
-  const handleLogout = () => {
-    clearStoredAuth();
-    setCurrentUserSessionToken(null);
-    toast({
-      title: 'Logged Out',
-      description: 'You have been successfully logged out.',
-    });
-  };
+  // const handleLogout = () => {
+  //   clearStoredAuth();
+  //   setCurrentUserSessionToken(null);
+  //   toast({
+  //     title: 'Logged Out',
+  //     description: 'You have been successfully logged out.',
+  //   });
+  // };
 
   // Dynamic Login Banner Component
   const LoginStatusBanner = () => {
@@ -150,9 +142,16 @@ export function TopToolbar() {
     const handleOpenUserConsole = () => {
       setShowUserConsole(true);
     };
+    const handleOpenLoginModal = () => {
+      setShowLoginModal(true);
+    };
     
     window.addEventListener('openUserConsole', handleOpenUserConsole);
-    return () => window.removeEventListener('openUserConsole', handleOpenUserConsole);
+    window.addEventListener('openLoginModal', handleOpenLoginModal);
+    return () => {
+      window.removeEventListener('openUserConsole', handleOpenUserConsole);
+      window.removeEventListener('openLoginModal', handleOpenLoginModal);
+    };
   }, []);
 
   const handleRunWithInputs = () => {
@@ -167,17 +166,17 @@ export function TopToolbar() {
     setActiveDialog('run');
   };
 
-  const handleRunAsTool = () => {
-    if (!canExecute) {
-      setShowLoginModal(true);
-      return;
-    }
-    if (checkForUnsavedChanges()) {
-      return;
-    }
-    console.log('Running workflow as tool:', currentWorkflowData?.name);
-    setActiveDialog('runAsTool');
-  };
+  // const handleRunAsTool = () => {
+  //   if (!canExecute) {
+  //     setShowLoginModal(true);
+  //     return;
+  //   }
+  //   if (checkForUnsavedChanges()) {
+  //     return;
+  //   }
+  //   console.log('Running workflow as tool:', currentWorkflowData?.name);
+  //   setActiveDialog('runAsTool');
+  // };
 
   const handleToggleMode = () => {
     if (displayMode === 'canvas' && !canEdit) {
