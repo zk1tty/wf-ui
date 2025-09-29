@@ -33,6 +33,18 @@ if (!supabase) {
   console.error('❌ Failed to initialize Supabase client. Please check your .env variables.');
 }
 
+// Lightweight debug helper to inspect loaded Supabase env at runtime (browser only)
+try {
+  if (typeof window !== 'undefined') {
+    (window as any).__SUPABASE_ENV__ = {
+      url: supabaseUrl ?? null,
+      anonKeyPrefix: supabaseAnonKey ? `${String(supabaseAnonKey).slice(0, 12)}...` : null,
+      anonKeyLength: supabaseAnonKey ? String(supabaseAnonKey).length : 0,
+      getAnonKey: () => supabaseAnonKey || null,
+    };
+  }
+} catch {}
+
 // Custom fetch function with auth headers
 async function authedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   if (!supabase) {

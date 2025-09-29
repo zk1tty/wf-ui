@@ -120,6 +120,18 @@ export const storeSessionToken = (sessionToken: string): void => {
 };
 
 /**
+ * Store anonymous session token and mark auth type
+ */
+export const storeAnonymousSessionToken = (sessionToken: string): void => {
+  try {
+    sessionStorage.setItem('workflow_session_token', sessionToken);
+    sessionStorage.setItem('workflow_auth_type', 'anonymous');
+  } catch (error) {
+    console.error('❌ [Auth] Error storing anonymous session token:', error);
+  }
+};
+
+/**
  * Get auth type from storage
  */
 export const getAuthType = (): string | null => {
@@ -193,9 +205,12 @@ export const validateSessionToken = async (sessionToken: string): Promise<boolea
     
     const isValid = response.ok;
     
-    // If invalid, clear the stored token
+    // If invalid, clear the stored token unless it's an anonymous session
     if (!isValid) {
-      clearStoredAuth();
+      const authType = getAuthType();
+      if (authType !== 'anonymous') {
+        clearStoredAuth();
+      }
     }
     
     return isValid;

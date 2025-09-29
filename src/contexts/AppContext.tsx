@@ -14,7 +14,7 @@ import { createEnhancedWorkflowService } from '@/services/enhancedWorkflowServic
 // import { fetchWorkflowLogs, cancelWorkflow } from '@/services/pollingService';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { hasValidSessionToken, getStoredSessionToken } from '@/utils/authUtils';
+import { hasValidSessionToken, getStoredSessionToken, storeAnonymousSessionToken } from '@/utils/authUtils';
 
 export type DisplayMode = 'canvas' | 'editor' | 'start';
 export type DialogType =
@@ -404,6 +404,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
                     setAnonymousUserId(data.user?.id ?? null);
                     setIsAnonymousUser(true);
                     setCurrentUserSessionToken(data.session.access_token);
+                    // Persist anonymous session token for page reload/navigation
+                    storeAnonymousSessionToken(data.session.access_token);
                     return data.session.access_token;
                   }
                   if (error) {
