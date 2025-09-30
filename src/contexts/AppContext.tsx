@@ -15,6 +15,7 @@ import { createEnhancedWorkflowService } from '@/services/enhancedWorkflowServic
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { hasValidSessionToken, getStoredSessionToken, storeAnonymousSessionToken } from '@/utils/authUtils';
+import { API_ENDPOINTS } from '@/lib/constants';
 
 export type DisplayMode = 'canvas' | 'editor' | 'start';
 export type DialogType =
@@ -148,6 +149,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [currentExecutionMode, setCurrentExecutionMode] = useState<'cloud-run' | 'local-run' | null>(null);
   const [currentExecutionInputs, setCurrentExecutionInputs] = useState<any | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const logsWsRef = useRef<WebSocket | null>(null);
   const [recordingStatus, setRecordingStatus] =
     useState<RecordingStatus>('idle');
   const [recordingData, setRecordingData] = useState<any>(null);
@@ -274,6 +276,17 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   }, []);
 
+  const closeLogsWebSocket = useCallback(() => {
+    if (logsWsRef.current) {
+      try {
+        logsWsRef.current.close();
+      } catch (e) {
+        // noop
+      }
+      logsWsRef.current = null;
+    }
+  }, []);
+
   const startPollingLogs = useCallback(
     (taskId: string) => {
       stopPollingLogs();
@@ -333,16 +346,100 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     [logPosition, workflowStatus, stopPollingLogs]
   );
 
+  const startLogsWebSocket = useCallback((executionId: string) => {
+    // Always clean any existing connection
+    closeLogsWebSocket();
+
+    try {
+      const wsUrl = API_ENDPOINTS.LOGS_STREAM_WS(executionId);
+      console.log('[Logs] Connecting WebSocket:', wsUrl, 'execution_id:', executionId);
+      const ws = new WebSocket(wsUrl);
+      logsWsRef.current = ws;
+
+      // Clear logs when a fresh connection opens
+      setLogData([]);
+
+      ws.onopen = () => {
+        console.log('[Logs] WebSocket connected');
+      };
+
+      ws.onmessage = (event: MessageEvent) => {
+        const pushMessage = (msg: string) => {
+          setLogData((prev) => [...prev, msg]);
+        };
+        const parseAndAppend = (text: string) => {
+          try {
+            const parsed = JSON.parse(text);
+            const message = parsed?.message ?? parsed?.data?.message ?? null;
+            if (message != null) {
+              console.log('[Logs] message:', message);
+              pushMessage(String(message));
+            } else {
+              // If no message field, append raw for visibility
+              console.log('[Logs] no message field, raw:', text?.slice?.(0, 200));
+              pushMessage(text);
+            }
+          } catch (e) {
+            // Not JSON; append raw
+            console.log('[Logs] non-JSON frame:', text?.slice?.(0, 200));
+            pushMessage(text);
+          }
+        };
+
+        const raw = event.data;
+        if (typeof raw === 'string') {
+          parseAndAppend(raw);
+        } else if (raw instanceof Blob) {
+          raw.text().then(parseAndAppend).catch(() => {
+            console.warn('[Logs] failed to read Blob frame');
+          });
+        } else if (raw instanceof ArrayBuffer) {
+          try {
+            const text = new TextDecoder().decode(new Uint8Array(raw));
+            parseAndAppend(text);
+          } catch {
+            console.warn('[Logs] failed to decode ArrayBuffer frame');
+          }
+        } else {
+          console.warn('[Logs] unsupported WS frame type');
+        }
+      };
+
+      ws.onerror = (err) => {
+        console.error('[Logs] WebSocket error:', err);
+        // Fallback to polling if WS fails
+        closeLogsWebSocket();
+        startPollingLogs(executionId);
+      };
+
+      ws.onclose = (evt: CloseEvent) => {
+        console.log('[Logs] WebSocket closed:', evt.code, evt.reason);
+        // If closed unexpectedly and workflow still running, fallback to polling
+        const abnormal = evt.code !== 1000;
+        if (abnormal && workflowStatus === 'running') {
+          startPollingLogs(executionId);
+        }
+      };
+    } catch {
+      // If creation throws, fallback to polling
+      startPollingLogs(executionId);
+    }
+  }, [closeLogsWebSocket, startPollingLogs, workflowStatus]);
+
   const cancelWorkflowExecution = useCallback(async (taskId: string) => {
     try {
       setWorkflowStatus('cancelling');
       await workflowService.cancelWorkflow(taskId);
+      // Reflect cancellation immediately in UI
+      setWorkflowStatus('cancelled');
+      stopPollingLogs();
+      closeLogsWebSocket();
     } catch (err) {
       console.error('Failed to cancel workflow:', err);
       setWorkflowError('Failed to cancel workflow');
       setWorkflowStatus('failed');
     }
-  }, []);
+  }, [stopPollingLogs, closeLogsWebSocket]);
 
   const executeWorkflow = useCallback(
     async (
@@ -356,6 +453,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setWorkflowStatus('starting');
       setWorkflowError(null);
       setActiveDialog(null);
+      setLogData([]);
+      closeLogsWebSocket();
 
       try {
         // Show toast for visual mode
@@ -515,10 +614,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
           setDisplayMode('canvas');
         }
         
-        // Only start log polling for non-visual workflows
-        // Visual streaming workflows handle their own status through RRWebVisualizer
-        if (!visual || (!result.visual_enabled && !result.visual_streaming_enabled)) {
-          startPollingLogs(result.task_id);
+        // Start live logs via WebSocket using execution_id only
+        const executionId = (result as any).execution_id as string | undefined;
+        console.log('[Logs] execution_id from executeWorkflow:', executionId);
+        if (executionId) {
+          startLogsWebSocket(executionId);
+        } else {
+          console.warn('[Logs] No execution_id returned in execute response; skipping WS logs.');
         }
       } catch (err) {
         console.error('Workflow execution failed:', err);
@@ -545,9 +647,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         setWorkflowError(errorMessage);
         setWorkflowStatus('failed');
         stopPollingLogs();
+        closeLogsWebSocket();
       }
     },
-    [startPollingLogs, stopPollingLogs, setDisplayMode, currentUserSessionToken]
+    [startLogsWebSocket, stopPollingLogs, setDisplayMode, currentUserSessionToken, closeLogsWebSocket]
   );
 
   // Uncomment for debugging
@@ -664,6 +767,14 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   useEffect(() => {
     fetchWorkflows();
   }, []);
+
+  // Close the logs WebSocket when workflow finishes or is cancelled
+  useEffect(() => {
+    if (['completed', 'failed', 'cancelled'].includes(workflowStatus)) {
+      closeLogsWebSocket();
+      stopPollingLogs();
+    }
+  }, [workflowStatus, closeLogsWebSocket, stopPollingLogs]);
 
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({

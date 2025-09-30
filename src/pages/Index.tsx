@@ -272,7 +272,7 @@ const Index2 = () => {
                   <div
                     className={`${
                       showLogViewer ? 'opacity-100' : 'opacity-0 w-0'
-                    } border-l border-gray-200 bg-white overflow-hidden transform transition-all duration-300 ease-in-out flex-shrink-0`}
+                    } border-l border-gray-200 bg-white overflow-hidden transform transition-all duration-300 ease-in-out flex-shrink-0 z-20`}
                     style={{
                       width: showLogViewer ? `${logPanelWidth}px` : '0px'
                     }}

@@ -25,6 +25,13 @@ export default ({ mode }) => {
           secure: false,
           ws: true, // Enable WebSocket proxying for DevTools
         },
+        // Proxy WebSocket logs endpoint
+        '/ws': {
+          target: env.VITE_PUBLIC_API_URL || 'http://localhost:8000',
+          changeOrigin: true,
+          secure: false,
+          ws: true,
+        },
       },
     },
     resolve: {

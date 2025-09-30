@@ -34,6 +34,9 @@ export const API_ENDPOINTS = {
   VISUAL_STATUS: (sessionId: string) => `${API_BASE_URL}/workflows/visual/${sessionId}/status`,
   VISUAL_VIEWER: (sessionId: string) => `${API_BASE_URL}/workflows/visual/${sessionId}/viewer`,
   VISUAL_STREAM_WS: (sessionId: string) => `${WS_BASE_URL}/workflows/visual/${sessionId}/stream`,
+
+  // Live logs WebSocket endpoint
+  LOGS_STREAM_WS: (executionId: string) => `${WS_BASE_URL}/ws/logs/${executionId}`,
   
   // Standard API endpoints
   WORKFLOWS: `${API_BASE_URL}/workflows`,
