@@ -9,8 +9,9 @@ import { TopToolbar } from '@/components/TopToolbar';
 import { useAppContext } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { LogViewer } from '@/components/LogViewer';
+import { VisualPanel } from '@/components/VisualPanel';
 import { Welcome } from '@/components/Welcome';
-import { Loader2, Terminal, ChevronRight, ChevronLeft, GripVertical, Footprints, Eye, EyeOff, XCircle } from 'lucide-react';
+import { Loader2, Terminal, ChevronRight, ChevronLeft, GripVertical, Footprints, Eye, XCircle } from 'lucide-react';
 import { useAppContext as useAppContextRaw } from '@/contexts/AppContext';
 import { sessionApiFetch, apiFetch } from '@/lib/api';
 
@@ -19,8 +20,6 @@ const Index2 = () => {
     displayMode, 
     workflowStatus, 
     currentWorkflowData,
-    visualOverlayActive,
-    setVisualOverlayActive,
     currentStreamingSession,
     overlayWorkflowInfo
   } = useAppContext();
@@ -41,6 +40,54 @@ const Index2 = () => {
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const [showVisualPanel, setShowVisualPanel] = useState(false);
+  const [visualPanelWidth, setVisualPanelWidth] = useState(() => {
+    try {
+      const storedWidth = localStorage.getItem('visualPanelWidth');
+      if (storedWidth) return parseInt(storedWidth, 10);
+      // Default to half the container width; fallback to 600px
+      const viewport = typeof window !== 'undefined' ? window.innerWidth : 1200;
+      return Math.max(480, Math.floor(viewport * 0.5));
+    } catch {
+      return 600;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('visualPanelWidth', visualPanelWidth.toString());
+    } catch {}
+  }, [visualPanelWidth]);
+
+  const handleLeftMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newWidth = e.clientX - containerRect.left;
+      const minWidth = 280;
+      const maxWidth = containerRect.width * 0.6;
+      const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+      setVisualPanelWidth(constrainedWidth);
+    };
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  const handleLeftDoubleClick = useCallback(() => {
+    setVisualPanelWidth(384);
+  }, []);
 
   const toggleLogViewer = () => setShowLogViewer((prev) => !prev);
 
@@ -146,24 +193,7 @@ const Index2 = () => {
                           <span>{currentWorkflowData.steps?.length || 0}</span>
                           <Footprints className="w-3 h-3" />
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => setVisualOverlayActive(!visualOverlayActive)}
-                          disabled={!currentStreamingSession || !overlayWorkflowInfo}
-                          title={visualOverlayActive ? 'Hide visual overlay' : (currentStreamingSession ? 'Show visual overlay' : 'No active visual session')}
-                          aria-label={visualOverlayActive ? 'Hide visual overlay' : 'Show visual overlay'}
-                          className={`justify-center whitespace-nowrap font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 border bg-background hover:text-accent-foreground h-11 rounded-md flex items-center gap-2 text-base px-6 py-3 disabled:opacity-50 text-white border-gray-600 hover:bg-gray-800 ${
-                            (!currentStreamingSession || !overlayWorkflowInfo)
-                              ? 'cursor-not-allowed'
-                              : 'cursor-pointer'
-                          }`}
-                        >
-                          {visualOverlayActive ? (
-                            <EyeOff className="w-6 h-6" />
-                          ) : (
-                            <Eye className="w-6 h-6" />
-                          )}
-                        </button>
+                        {/* Legacy overlay toggle removed */}
                         <button
                           type="button"
                           onClick={async () => {
@@ -206,11 +236,47 @@ const Index2 = () => {
 
                 {/* Canvas Area */}
                 <div className="flex-1 flex overflow-hidden" ref={containerRef}>
-                  {/* Main canvas area - now horizontal flex */}
+                  {/* Left visual panel: for live-streaming iframe */}
+                  <VisualPanel 
+                    isOpen={showVisualPanel}
+                    width={visualPanelWidth}
+                    sessionId={currentStreamingSession}
+                    onResizeMouseDown={handleLeftMouseDown}
+                    onResizeDoubleClick={handleLeftDoubleClick}
+                  />
+
+                  {/* Main canvas area - center */}
                   <div className="relative flex-1 overflow-auto">
                     <WorkflowCanvas />
                     
-                    {/* Toggle button - repositioned for right panel */}
+                    {/* Toggle buttons - left Visual, right Logs */}
+                    <div className="absolute top-4 left-4">
+                      <button
+                        onClick={() => setShowVisualPanel(prev => !prev)}
+                        className={`${
+                          currentStreamingSession && overlayWorkflowInfo
+                            ? 'bg-green-700 hover:bg-green-500'
+                            : 'bg-gray-500 hover:bg-gray-600 cursor-not-allowed'
+                        } text-white rounded-lg px-3 py-2 shadow-lg flex items-center transition-all duration-200 hover:shadow-xl`}
+                        title="Toggle Visual Stream"
+                        disabled={!currentStreamingSession || !overlayWorkflowInfo}
+                      >
+                        <div className="bg-white bg-opacity-20 rounded-full p-1.5 flex items-center justify-center mr-2">
+                          {workflowStatus === 'running' ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </div>
+                        <span className="text-sm font-medium">Visual</span>
+                        {showVisualPanel ? (
+                          <ChevronLeft className="w-4 h-4 ml-2" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 ml-2" />
+                        )}
+                      </button>
+                    </div>
+
                     <div className="absolute top-4 right-4">
                       <button
                         onClick={toggleLogViewer}
@@ -289,11 +355,11 @@ const Index2 = () => {
               <WorkflowCanvas />
             )}
           </div>
-        </div>
 
-        {/* Dialogs */}
-        <RunWorkflowDialog />
-        <RunAsToolDialog />
+          {/* Dialogs */}
+          <RunWorkflowDialog />
+          <RunAsToolDialog />
+        </div>
       </div>
     </SidebarProvider>
   );
