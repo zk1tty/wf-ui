@@ -322,7 +322,7 @@ export function WorkflowSidebar() {
 
   return (
     <>
-      <Sidebar collapsible="icon" className={`${
+      <Sidebar collapsible="offcanvas" className={`${
         theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'
       } border-r`}>
         <SidebarHeader className={`${
