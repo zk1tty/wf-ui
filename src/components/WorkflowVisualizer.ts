@@ -526,11 +526,12 @@ export class WorkflowVisualizer {
       this.animationEventCount++;
     }
 
-    // Skip duplicate events
+    // Skip duplicate events (more tolerant threshold)
     if (protectedEvent.timestamp && protectedEvent.timestamp === this.lastEventTimestamp) {
       this.duplicateEventCount++;
-      if (this.duplicateEventCount > 5) {
-        console.warn('⚠️ [WorkflowVisualizer] Multiple duplicate events detected');
+      if (this.duplicateEventCount > 20) {
+        console.warn('⚠️ [WorkflowVisualizer] Duplicate rrweb events frequently detected (throttled)');
+        this.duplicateEventCount = 0; // reset to avoid spamming
       }
       return;
     }
@@ -602,21 +603,33 @@ export class WorkflowVisualizer {
   private sequenceErrors: number = 0;
   
   private validateEventSequence(sequenceId: number): void {
-    // Ignore sequence validation until after first FullSnapshot, or while in static snapshot mode
+    // Ignore validation until we have a FullSnapshot or when in static snapshot mode
     if (!this.hasReceivedFullSnapshot || this.staticSnapshotMode) {
       this.expectedSequenceId = sequenceId + 1;
       return;
     }
+    // Be tolerant to out-of-order bursts by allowing small negative deltas
     if (sequenceId !== this.expectedSequenceId) {
       this.sequenceErrors++;
-      if (this.sequenceErrors > 5) {
-        console.warn('❌ [Sequence] Too many sequence errors - event ordering may be corrupted');
-        // Do NOT surface to UI; backend reset + gating should recover
+      if (this.sequenceErrors % 10 === 0) {
+        console.warn('❌ [Sequence] Repeated sequence mismatches; continuing (tolerant mode)');
       }
-    } else {
-      // Reset error streak on correct sequence
-      this.sequenceErrors = 0;
+      // Adjust expected to the next id after received to avoid cascading warnings
+      this.expectedSequenceId = Math.max(this.expectedSequenceId, sequenceId) + 1;
+      // If too many mismatches, request fresh sequence and wait for a new FullSnapshot
+      if (this.sequenceErrors > 50) {
+        try {
+          console.warn('🔄 [Sequence] Excessive mismatches - requesting sequence reset and waiting for FullSnapshot');
+          this.requestSequenceReset();
+          this.hasReceivedFullSnapshot = false;
+          this.staticSnapshotMode = true;
+          this.sequenceErrors = 0;
+        } catch {}
+      }
+      return;
     }
+    // Correct order: advance and reset error streak
+    this.sequenceErrors = 0;
     this.expectedSequenceId = sequenceId + 1;
   }
 

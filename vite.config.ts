@@ -32,6 +32,13 @@ export default ({ mode }) => {
           secure: false,
           ws: true,
         },
+        // Proxy Run Events WebSocket endpoint (Snapshot + Events)
+        '/runs': {
+          target: env.VITE_PUBLIC_API_URL || 'http://localhost:8000',
+          changeOrigin: true,
+          secure: false,
+          ws: true,
+        },
       },
     },
     resolve: {

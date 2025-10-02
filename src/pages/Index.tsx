@@ -13,6 +13,7 @@ import { VisualPanel } from '@/components/VisualPanel';
 import { Welcome } from '@/components/Welcome';
 import { Loader2, Terminal, ChevronRight, ChevronLeft, GripVertical, Footprints, Eye, XCircle } from 'lucide-react';
 import { useAppContext as useAppContextRaw } from '@/contexts/AppContext';
+import { useRunEventsWebSocket } from '@/hooks/useRunEventsWebSocket';
 import { sessionApiFetch, apiFetch } from '@/lib/api';
 
 const Index2 = () => {
@@ -26,6 +27,8 @@ const Index2 = () => {
   const { theme } = useTheme();
   const [showLogViewer, setShowLogViewer] = useState(false);
   const { currentUserSessionToken } = useAppContextRaw();
+  const { currentRunId } = useAppContextRaw();
+  useRunEventsWebSocket(currentRunId || undefined);
   
   // Initialize with stored width or default
   const [logPanelWidth, setLogPanelWidth] = useState(() => {

@@ -71,6 +71,8 @@ interface AppContextType {
     mode: string;
     hasStreamingSupport?: boolean;
   } | null;
+  currentRunId: string | null;
+  setCurrentRunId: (runId: string | null) => void;
   setVisualOverlayActive: (active: boolean) => void;
   setCurrentStreamingSession: (sessionId: string | null) => void;
   setOverlayWorkflowInfo: (info: { name: string; taskId: string; mode: string; hasStreamingSupport?: boolean } | null) => void;
@@ -170,6 +172,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     mode: string;
     hasStreamingSupport?: boolean;
   } | null>(null);
+  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
 
   // Wrapper function to handle both workflow data and public flag
   const setCurrentWorkflowData = useCallback((workflow: Workflow | null, isPublic: boolean = false) => {
@@ -352,7 +355,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
     try {
       const wsUrl = API_ENDPOINTS.LOGS_STREAM_WS(executionId);
-      console.log('[Logs] Connecting WebSocket:', wsUrl, 'execution_id:', executionId);
+      console.log(`[Logs] Connecting WebSocket (execution_id=${executionId}):`, wsUrl);
       const ws = new WebSocket(wsUrl);
       logsWsRef.current = ws;
 
@@ -372,7 +375,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             const parsed = JSON.parse(text);
             const message = parsed?.message ?? parsed?.data?.message ?? null;
             if (message != null) {
-              console.log('[Logs] message:', message);
               pushMessage(String(message));
             } else {
               // If no message field, append raw for visibility
@@ -622,6 +624,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         } else {
           console.warn('[Logs] No execution_id returned in execute response; skipping WS logs.');
         }
+        // Capture runId for step event stream when available
+        const runId = (result as any).execution_id as string | undefined;
+        if (runId) {
+          setCurrentRunId(runId);
+        }
       } catch (err) {
         console.error('Workflow execution failed:', err);
         
@@ -823,6 +830,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     visualOverlayActive,
     currentStreamingSession,
     overlayWorkflowInfo,
+    currentRunId,
+    setCurrentRunId,
     setVisualOverlayActive,
     setCurrentStreamingSession,
     setOverlayWorkflowInfo,
@@ -875,6 +884,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     visualOverlayActive,
     currentStreamingSession,
     overlayWorkflowInfo,
+    currentRunId,
+    setCurrentRunId,
     setVisualOverlayActive,
     setCurrentStreamingSession,
     setOverlayWorkflowInfo,

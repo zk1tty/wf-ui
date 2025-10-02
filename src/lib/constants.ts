@@ -47,4 +47,6 @@ export const API_ENDPOINTS = {
   WORKFLOW_STATS: (workflowId: string) => `${API_BASE_URL}/workflows/executions/stats/${workflowId}`,
   EXECUTION_HISTORY: `${API_BASE_URL}/workflows/executions/history`,
   ACTIVE_EXECUTIONS: `${API_BASE_URL}/workflows/executions/active`,
+  // Workflow run events (Snapshot + Event stream)
+  RUN_EVENTS_WS: (runId: string) => `${WS_BASE_URL}/runs/${runId}/events`,
 } as const;
