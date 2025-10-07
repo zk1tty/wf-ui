@@ -16,8 +16,7 @@ import {
   LogIn,
   Key, 
   AlertCircle, 
-  CheckCircle, 
-  Download
+  CheckCircle
 } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { 
@@ -92,53 +91,21 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
     }
   };
 
-  const handleOpenChromeExtensions = (event: React.MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    const url = 'chrome://extensions';
-    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+  const webStoreUrl = 'https://chromewebstore.google.com/detail/rebrowse-recorder/fedihgolnjheimplodebfklbncpkamgg';
+  const handleOpenChromeWebStore = () => {
+    const newWindow = window.open(webStoreUrl, '_blank', 'noopener,noreferrer');
     if (!newWindow) {
       toast({
         title: 'Popup blocked',
-        description: 'Please open chrome://extensions manually from your browser.',
+        description: 'Please open the Chrome Web Store manually.',
         variant: 'destructive',
       });
     }
   };
 
-  const handleGetExtension = () => {
-    // Try multiple approaches for downloading the extension
-    try {
-      // First try: Direct download from public directory
-      const link = document.createElement('a');
-      link.href = '/chrome-extension.zip';
-      link.download = 'chrome-extension.zip';
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast({
-        title: 'Download Started',
-        description: 'Chrome extension zip file is being downloaded.',
-      });
-    } catch (error) {
-      // Fallback: Show instructions or redirect to GitHub releases
-      toast({
-        title: 'Download Issue',
-        description: 'Please contact support for the Chrome extension download.',
-        variant: 'destructive',
-      });
-      console.error('Download failed:', error);
-    }
-  };
+  // Open the official Chrome Web Store listing for installation
 
-  // const copyExtensionUrl = () => {
-  //   navigator.clipboard.writeText('/chrome-extension.zip');
-  //   toast({
-  //     title: 'Copied!',
-  //     description: 'Extension download path copied to clipboard',
-  //   });
-  // };
+  
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -155,7 +122,7 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
           <DialogDescription className={
             theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
           }>
-            Login from Recorder - Chrome extension.
+            Login from Recorder - Chrome Extension.
           </DialogDescription>
         </DialogHeader>
 
@@ -178,15 +145,15 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleGetExtension}
+                    onClick={handleOpenChromeWebStore}
                     className={`${
                       theme === 'dark' 
                         ? 'border-gray-600 text-blue-400 hover:bg-gray-800 bg-gray-900' 
                         : 'border-blue-300 text-blue-700 hover:bg-blue-100'
                     }`}
                   >
-                    <Download className="h-3 w-3 mr-1" />
-                    Install
+                    <Chrome className="h-3 w-3 mr-1" />
+                    Get Rebrowse Recorder
                   </Button>
                   {/* <Button
                     variant="ghost"
@@ -267,13 +234,9 @@ export const SessionLoginModal: React.FC<SessionLoginModalProps> = ({
             <ol className={`text-sm space-y-1 list-decimal list-inside ${
               theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
             }`}>
-              <li>Click Install buttton above.</li>
-              <li>
-                Go to <a href="chrome://extensions" target="_blank" rel="noopener noreferrer" onClick={handleOpenChromeExtensions} className={theme === 'dark' ? 'text-blue-400 underline underline-offset-2' : 'text-blue-600 underline underline-offset-2 hover:text-blue-800'}>chrome://extensions</a>
-              </li>
-              <li>Go to "Load unpacked"</li>
-              <li>Select the folder where you downloaded.</li>
-              <li>Go to Login app</li>
+              <li>Click " Get Rebrowse Recorder" above and install the extension.</li>
+              <li>Open the Recorder and go to "Login"</li>
+              <li>Copy and paste your token above and click Login.</li>
             </ol>
           </div>
         </div>
