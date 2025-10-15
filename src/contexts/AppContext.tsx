@@ -197,6 +197,81 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     return false;
   }, [editorStatus, recordingStatus, setActiveDialog]);
 
+  // ============================================================================
+  // Storage Cleanup Helper Functions
+  // ============================================================================
+
+  /**
+   * Clean up old execution params from sessionStorage
+   * Keeps only the most recent 10 entries to prevent quota issues
+   */
+  const cleanupOldExecutionParams = useCallback(() => {
+    try {
+      const executionKeys: { key: string; timestamp: number }[] = [];
+      
+      // Find all execution_params entries
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('execution_params_')) {
+          try {
+            const value = sessionStorage.getItem(key);
+            if (value) {
+              const params = JSON.parse(value);
+              executionKeys.push({
+                key,
+                timestamp: params.timestamp || 0,
+              });
+            }
+          } catch (e) {
+            // Invalid JSON, mark for deletion
+            executionKeys.push({ key, timestamp: 0 });
+          }
+        }
+      }
+      
+      // Keep only the 10 most recent entries
+      if (executionKeys.length > 10) {
+        const sortedKeys = executionKeys.sort((a, b) => b.timestamp - a.timestamp);
+        const keysToRemove = sortedKeys.slice(10); // Remove all but the 10 newest
+        
+        keysToRemove.forEach(({ key }) => {
+          sessionStorage.removeItem(key);
+          console.log(`🧹 [Storage] Cleaned up old execution params: ${key}`);
+        });
+        
+        console.log(`🧹 [Storage] Removed ${keysToRemove.length} old execution param entries`);
+      }
+    } catch (error) {
+      console.error('❌ [Storage] Failed to cleanup old execution params:', error);
+    }
+  }, []);
+
+  /**
+   * Force cleanup of ALL execution params (used when quota is exceeded)
+   */
+  const forceCleanupAllExecutionParams = useCallback(() => {
+    try {
+      const keysToRemove: string[] = [];
+      
+      // Find all execution_params entries
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('execution_params_')) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      // Remove all execution params
+      keysToRemove.forEach(key => {
+        sessionStorage.removeItem(key);
+      });
+      
+      console.log(`🧹 [Storage] Force cleanup: Removed ALL ${keysToRemove.length} execution param entries`);
+    } catch (error) {
+      console.error('❌ [Storage] Failed to force cleanup execution params:', error);
+    }
+  }, []);
+
   const setDisplayMode = useCallback(
     (mode: DisplayMode) => {
       if (checkForUnsavedChanges()) {
@@ -587,7 +662,30 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             visual: true,
             timestamp: Date.now(),
           };
-          sessionStorage.setItem(`execution_params_${result.task_id}`, JSON.stringify(executionParams));
+          
+          try {
+            // Clean up old execution params to prevent quota exceeded errors
+            cleanupOldExecutionParams();
+            
+            sessionStorage.setItem(`execution_params_${result.task_id}`, JSON.stringify(executionParams));
+          } catch (error) {
+            if (error instanceof Error && error.name === 'QuotaExceededError') {
+              console.warn('⚠️ [Storage] Quota exceeded, forcing cleanup and retrying...');
+              
+              // Aggressive cleanup: remove all old execution params
+              forceCleanupAllExecutionParams();
+              
+              // Retry once after cleanup
+              try {
+                sessionStorage.setItem(`execution_params_${result.task_id}`, JSON.stringify(executionParams));
+              } catch (retryError) {
+                console.error('❌ [Storage] Failed to store execution params even after cleanup:', retryError);
+                // Continue execution - this is not critical for workflow execution
+              }
+            } else {
+              console.error('❌ [Storage] Failed to store execution params:', error);
+            }
+          }
         }
         
         // Handle visual mode - redirect to appropriate viewer based on streaming capability

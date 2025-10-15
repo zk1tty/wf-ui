@@ -10,6 +10,7 @@ import {
   Copy,
   ClipboardPaste,
   ClipboardCopy,
+  Hand,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -26,12 +27,14 @@ interface WorkflowStepNodeData {
     | 'key_press'
     | 'clipboard_copy'
     | 'clipboard_paste'
-    | 'click_to_copy';
+    | 'click_to_copy'
+    | 'human-input'
+    | 'wait';
   target: string;
   value?: string;
   stepNumber: number;
   // Live status fields (optional - provided during runs)
-  status?: 'ready' | 'running' | 'AI-fallback' | 'success' | 'fail';
+  status?: 'ready' | 'running' | 'AI-fallback' | 'success' | 'fail' | 'waiting-human-input';
   fallbackLabel?: string;
 }
 
@@ -50,6 +53,8 @@ const actionIcons = {
   clipboard_copy: Copy,
   clipboard_paste: ClipboardPaste,
   click_to_copy: ClipboardCopy,
+  'human-input': Hand,
+  wait: Hand,
 };
 
 const actionColors = {
@@ -62,6 +67,8 @@ const actionColors = {
   clipboard_copy: 'bg-orange-500',
   clipboard_paste: 'bg-pink-500',
   click_to_copy: 'bg-indigo-500',
+  'human-input': 'bg-yellow-500',
+  wait: 'bg-yellow-500',
 };
 
 export const WorkflowStepNode = memo(
@@ -145,6 +152,15 @@ export const WorkflowStepNode = memo(
                 theme === 'dark' ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'
               )}>
                 <LoaderCircle className="w-6 h-6 animate-spin" />
+              </span>
+            )}
+            {data.status === 'waiting-human-input' && (
+              <span className={cn(
+                'flex items-center gap-1 text-xs px-2 py-1 rounded-full animate-pulse',
+                theme === 'dark' ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800'
+              )}>
+                <Hand className="w-8 h-8" />
+                Waiting for input...
               </span>
             )}
             {data.status === 'AI-fallback' && (

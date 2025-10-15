@@ -31,6 +31,8 @@ export const stepSchema = z.object({
     'clipboard_copy',
     'clipboard_paste',
     'click_to_copy',
+    'human-input',  // Human input step - waits for user interaction via Control Channel
+    'wait',         // Alias for human-input (backward compatibility)
   ]),
 
   /* optional fields (vary by step type) */
