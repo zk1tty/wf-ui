@@ -73,8 +73,8 @@ export function calculateViewportTransform(iframe: HTMLIFrameElement | null): Vi
     
     // 🔧 FIX: Try using the wrapper's offsetLeft/offsetTop instead of getBoundingClientRect
     // This might give us more accurate positioning relative to the iframe
-    const offsetX = replayerWrapper.offsetLeft;
-    const offsetY = replayerWrapper.offsetTop;
+    let offsetX = replayerWrapper.offsetLeft;
+    let offsetY = replayerWrapper.offsetTop;
     
     // 🐛 DEBUG: Check if we have negative offsets that might cause issues
     if (offsetY < 0) {
@@ -86,21 +86,42 @@ export function calculateViewportTransform(iframe: HTMLIFrameElement | null): Vi
     const originalOffsetX = displayRect.left - iframeRect.left;
     const originalOffsetY = displayRect.top - iframeRect.top;
     
-    // 🐛 DEBUG: Log all offset calculation methods to compare (commented out to reduce noise)
-    // console.log('🐛 [CoordinateTransform] Offset comparison:', {
-    //   usingOffsetLeftTop: { x: offsetX, y: offsetY },
-    //   usingBoundingClientRect: { x: wrapperOffsetX, y: wrapperOffsetY },
-    //   originalDisplayOffset: { x: originalOffsetX, y: originalOffsetY },
-    //   wrapperProperties: { 
-    //     offsetLeft: replayerWrapper.offsetLeft, 
-    //     offsetTop: replayerWrapper.offsetTop,
-    //     clientLeft: replayerWrapper.clientLeft,
-    //     clientTop: replayerWrapper.clientTop
-    //   },
-    //   displayRect: { left: displayRect.left, top: displayRect.top },
-    //   iframeRect: { left: iframeRect.left, top: iframeRect.top },
-    //   wrapperRect: { left: wrapperRect.left, top: wrapperRect.top }
-    // });
+    // 🔧 REMOTE DEPLOYMENT FIX: If the offsetLeft/offsetTop method gives very different results,
+    // fall back to the original display rect method for remote environments
+    const offsetDifference = Math.abs(offsetX - originalOffsetX);
+    if (offsetDifference > 100) { // If difference is more than 100px, likely a remote environment issue
+      console.warn('⚠️ [CoordinateTransform] Large offset difference detected, using display rect method for remote environment');
+      console.warn('⚠️ [CoordinateTransform] Difference:', offsetDifference, 'px');
+      offsetX = originalOffsetX;
+      offsetY = originalOffsetY;
+    }
+    
+    // 🔧 MANUAL OFFSET CORRECTION: For cases where automatic detection doesn't work
+    // You can manually adjust these values based on your remote environment
+    const MANUAL_OFFSET_X = 0; // Add/subtract pixels to fix X-axis offset
+    const MANUAL_OFFSET_Y = 0; // Add/subtract pixels to fix Y-axis offset
+    
+    if (MANUAL_OFFSET_X !== 0 || MANUAL_OFFSET_Y !== 0) {
+      console.log('🔧 [CoordinateTransform] Applying manual offset correction:', { x: MANUAL_OFFSET_X, y: MANUAL_OFFSET_Y });
+      offsetX += MANUAL_OFFSET_X;
+      offsetY += MANUAL_OFFSET_Y;
+    }
+    
+    // 🐛 DEBUG: Re-enable logs to debug remote deployment offset issue
+    console.log('🐛 [CoordinateTransform] Offset comparison:', {
+      usingOffsetLeftTop: { x: offsetX, y: offsetY },
+      usingBoundingClientRect: { x: wrapperOffsetX, y: wrapperOffsetY },
+      originalDisplayOffset: { x: originalOffsetX, y: originalOffsetY },
+      wrapperProperties: { 
+        offsetLeft: replayerWrapper.offsetLeft, 
+        offsetTop: replayerWrapper.offsetTop,
+        clientLeft: replayerWrapper.clientLeft,
+        clientTop: replayerWrapper.clientTop
+      },
+      displayRect: { left: displayRect.left, top: displayRect.top },
+      iframeRect: { left: iframeRect.left, top: iframeRect.top },
+      wrapperRect: { left: wrapperRect.left, top: wrapperRect.top }
+    });
 
     console.debug('🔍 [CoordinateTransform] Calculated transform:', {
       remote: { width: remoteWidth, height: remoteHeight },
@@ -179,18 +200,18 @@ export function toRemoteCoordinates(
     remote: { x: remoteX, y: remoteY },
   });
 
-  // 🐛 DEBUG: Log transformation details for mouse offset investigation (commented out to reduce noise)
-  // console.log('🐛 [CoordinateTransform] Mouse offset debug:', {
-  //   input: { localX, localY },
-  //   transform: { scaleX: transform.scaleX, scaleY: transform.scaleY, offsetX: transform.offsetX, offsetY: transform.offsetY },
-  //   calculation: {
-  //     adjustedX: `${localX} - ${transform.offsetX} = ${adjustedX}`,
-  //     adjustedY: `${localY} - ${transform.offsetY} = ${adjustedY}`,
-  //     scaledX: `${adjustedX} * ${transform.scaleX} = ${remoteX}`,
-  //     scaledY: `${adjustedY} * ${transform.scaleY} = ${remoteY}`
-  //   },
-  //   result: { remoteX, remoteY }
-  // });
+  // 🐛 DEBUG: Re-enable logs to debug remote deployment offset issue
+  console.log('🐛 [CoordinateTransform] Mouse offset debug:', {
+    input: { localX, localY },
+    transform: { scaleX: transform.scaleX, scaleY: transform.scaleY, offsetX: transform.offsetX, offsetY: transform.offsetY },
+    calculation: {
+      adjustedX: `${localX} - ${transform.offsetX} = ${adjustedX}`,
+      adjustedY: `${localY} - ${transform.offsetY} = ${adjustedY}`,
+      scaledX: `${adjustedX} * ${transform.scaleX} = ${remoteX}`,
+      scaledY: `${adjustedY} * ${transform.scaleY} = ${remoteY}`
+    },
+    result: { remoteX, remoteY }
+  });
 
   return {
     x: remoteX,
@@ -272,4 +293,3 @@ export function isWithinReplayerBounds(
     return false;
   }
 }
-
