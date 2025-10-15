@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import {
   ReactFlow,
   Background,
+  BackgroundVariant,
   Controls,
   MiniMap,
   useNodesState,
@@ -149,8 +150,8 @@ export function WorkflowCanvas() {
     backgroundColor: theme === 'dark' ? '#000000' : '#f9fafb'
   };
   
-  const backgroundClass = theme === 'dark' ? 'bg-black canvas-dots-dark' : 'bg-gray-50';
-  const backgroundGridColor = theme === 'dark' ? '#333333' : '#e5e7eb';
+  const backgroundClass = theme === 'dark' ? 'bg-black' : 'bg-gray-50';
+  const backgroundDotsColor = theme === 'dark' ? '#ffffff' : '#000000';
   const controlsClass = theme === 'dark' 
     ? 'bg-gray-800 border border-gray-600 rounded-lg shadow-sm text-white' 
     : 'bg-white border border-gray-200 rounded-lg shadow-sm';
@@ -174,7 +175,7 @@ export function WorkflowCanvas() {
         style={canvasStyle}
         defaultViewport={{ x: 0, y: 0, zoom: 0 }}
       >
-        <Background color={backgroundGridColor} gap={20} />
+        <Background color={backgroundDotsColor} variant={BackgroundVariant.Dots} gap={20} />
         <Controls className={controlsClass} />
         <MiniMap
           className={minimapClass}

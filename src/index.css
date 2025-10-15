@@ -194,10 +194,3 @@
 .dark .drop-shadow-lg {
   filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.6));
 }
-
-/* Canvas dots pattern for dark mode */
-.canvas-dots-dark {
-  background-image: radial-gradient(circle, rgba(34, 211, 238, 0.4) 50px, transparent 50px);
-  background-size: 20px 20px;
-  background-position: 0 0, 10px 10px;
-}
