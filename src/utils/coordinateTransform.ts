@@ -90,16 +90,16 @@ export function calculateViewportTransform(iframe: HTMLIFrameElement | null): Vi
     // fall back to the original display rect method for remote environments
     const offsetDifference = Math.abs(offsetX - originalOffsetX);
     if (offsetDifference > 100) { // If difference is more than 100px, likely a remote environment issue
-      console.warn('⚠️ [CoordinateTransform] Large offset difference detected, using display rect method for remote environment');
-      console.warn('⚠️ [CoordinateTransform] Difference:', offsetDifference, 'px');
+      console.debug('🧐 [CoordinateTransform] Large offset difference detected, using display rect method for remote environment');
+      console.debug('🧐 [CoordinateTransform] Difference:', offsetDifference, 'px');
       offsetX = originalOffsetX;
       offsetY = originalOffsetY;
     }
     
     // 🔧 MANUAL OFFSET CORRECTION: For cases where automatic detection doesn't work
     // You can manually adjust these values based on your remote environment
-    const MANUAL_OFFSET_X = 0; // Add/subtract pixels to fix X-axis offset
-    const MANUAL_OFFSET_Y = 200; // Add/subtract pixels to fix Y-axis offset (increased to move remote mouse UP)
+    const MANUAL_OFFSET_X: number = 0; // Add/subtract pixels to fix X-axis offset
+    const MANUAL_OFFSET_Y: number = 230; // Add/subtract pixels to fix Y-axis offset (increased to move remote mouse UP)
     
     if (MANUAL_OFFSET_X !== 0 || MANUAL_OFFSET_Y !== 0) {
       console.log('🔧 [CoordinateTransform] Applying manual offset correction:', { x: MANUAL_OFFSET_X, y: MANUAL_OFFSET_Y });
@@ -108,7 +108,7 @@ export function calculateViewportTransform(iframe: HTMLIFrameElement | null): Vi
     }
     
     // 🐛 DEBUG: Re-enable logs to debug remote deployment offset issue
-    console.log('🐛 [CoordinateTransform] Offset comparison:', {
+    console.debug('🐛 [CoordinateTransform] Offset comparison:', {
       usingOffsetLeftTop: { x: offsetX, y: offsetY },
       usingBoundingClientRect: { x: wrapperOffsetX, y: wrapperOffsetY },
       originalDisplayOffset: { x: originalOffsetX, y: originalOffsetY },
@@ -129,32 +129,6 @@ export function calculateViewportTransform(iframe: HTMLIFrameElement | null): Vi
       scale: { x: scaleX, y: scaleY },
       offset: { x: offsetX, y: offsetY },
     });
-
-    // 🐛 DEBUG: Log detailed positioning info to help diagnose offset issues (commented out to reduce noise)
-    // console.log('🐛 [CoordinateTransform] DEBUG - Detailed positioning:', {
-    //   iframeRect: {
-    //     left: iframeRect.left,
-    //     top: iframeRect.top,
-    //     width: iframeRect.width,
-    //     height: iframeRect.height
-    //   },
-    //   displayRect: {
-    //     left: displayRect.left,
-    //     top: displayRect.top,
-    //     width: displayRect.width,
-    //     height: displayRect.height
-    //   },
-    //   calculatedOffset: {
-    //     x: offsetX,
-    //     y: offsetY
-    //   },
-    //   replayerWrapper: replayerWrapper ? {
-    //     offsetLeft: replayerWrapper.offsetLeft,
-    //     offsetTop: replayerWrapper.offsetTop,
-    //     clientLeft: replayerWrapper.clientLeft,
-    //     clientTop: replayerWrapper.clientTop
-    //   } : 'not found'
-    // });
 
     return {
       scaleX,
@@ -201,7 +175,7 @@ export function toRemoteCoordinates(
   });
 
   // 🐛 DEBUG: Re-enable logs to debug remote deployment offset issue
-  console.log('🐛 [CoordinateTransform] Mouse offset debug:', {
+  console.debug('🐛 [CoordinateTransform] Mouse offset debug:', {
     input: { localX, localY },
     transform: { scaleX: transform.scaleX, scaleY: transform.scaleY, offsetX: transform.offsetX, offsetY: transform.offsetY },
     calculation: {
