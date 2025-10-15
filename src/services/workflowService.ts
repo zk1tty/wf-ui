@@ -57,39 +57,6 @@ export interface WorkflowService {
 }
 
 class WorkflowServiceImpl implements WorkflowService {
-  // Utility function to normalize workflow data
-  private normalizeWorkflowData(workflow: any): any {
-    return {
-      ...workflow,
-      steps: workflow.steps?.map((step: any) => ({
-        // Ensure all required fields are present with proper defaults
-        description: step.description ?? null,
-        output: step.output ?? null,
-        timestamp: step.timestamp ?? null,
-        tabId: step.tabId ?? null,
-        type: step.type,
-        // Optional fields - only include if they exist
-        ...(step.url !== undefined && { url: step.url }),
-        ...(step.cssSelector !== undefined && { cssSelector: step.cssSelector }),
-        ...(step.xpath !== undefined && { xpath: step.xpath }),
-        ...(step.elementTag !== undefined && { elementTag: step.elementTag }),
-        ...(step.elementText !== undefined && { elementText: step.elementText }),
-        ...(step.selectedText !== undefined && { selectedText: step.selectedText }),
-        ...(step.value !== undefined && { value: step.value }),
-        ...(step.task !== undefined && { task: step.task }),
-        ...(step.content !== undefined && { content: step.content }),
-        ...(step.timeoutMs !== undefined && { timeoutMs: step.timeoutMs }),
-      })) || [],
-      // Normalize input_schema to ensure required field is always boolean
-      input_schema: workflow.input_schema?.map((input: any) => ({
-        name: input.name,
-        type: input.type,
-        // Convert null required to false, ensure it's always boolean
-        required: input.required === null ? false : Boolean(input.required),
-        value: input.value ?? '',
-      })) || []
-    };
-  }
   async getWorkflows(): Promise<Workflow[]> {
     const response = await fetchClient.GET('/api/workflows');
 
@@ -120,8 +87,8 @@ class WorkflowServiceImpl implements WorkflowService {
       throw new Error('Failed to return data from server');
     }
 
-    // Normalize the workflow data to ensure consistent schema
-    return this.normalizeWorkflowData(data);
+    // Return data as-is; Zod schema will handle validation and defaults
+    return data;
   }
 
   async getPublicWorkflowById(id: string): Promise<any> {
@@ -153,10 +120,8 @@ class WorkflowServiceImpl implements WorkflowService {
         throw new Error('No workflow data found in response');
       }
       
-      // Normalize the workflow data to match our Zod schema expectations
-      const normalizedWorkflow = this.normalizeWorkflowData(workflow);
-      
-      return normalizedWorkflow;
+      // Return data as-is; Zod schema will handle validation and defaults
+      return workflow;
     } catch (error) {
       console.error('[workflowService] Failed to fetch public workflow:', error);
       throw new Error('Failed to load public workflow');

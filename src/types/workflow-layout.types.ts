@@ -8,17 +8,21 @@ export type AppNode = BuiltInNode | PositionLoggerNode;
 export const inputFieldSchema = z.object({
   name: z.string(),
   type: z.enum(['string', 'number', 'boolean']),
-  required: z.boolean(),
-  value: z.any(),
+  required: z.boolean().nullable().optional(), // Backend may send null, undefined, or boolean
+  value: z.any().optional(), // Backend may send any value or undefined
 });
 
 /* ── Step definition ───────────────────────────────────────────────── */
+/**
+ * VALIDATION STRATEGY:
+ * - Schema matches backend API contract exactly (no transformation)
+ * - Backend sends: undefined | null | <type>
+ * - Schema accepts: undefined | null | <type> via .nullable().optional()
+ * - Only validates data structure, doesn't mutate data
+ * - Stateless and predictable
+ */
 export const stepSchema = z.object({
-  /* core fields */
-  description: z.string().nullable(),
-  output: z.unknown().nullable(),
-  timestamp: z.number().int().nullable(),
-  tabId: z.number().int().nullable(),
+  /* Core fields - match backend ClickStep/InputStep/etc contracts */
   type: z.enum([
     'navigation',
     'click',
@@ -34,8 +38,12 @@ export const stepSchema = z.object({
     'human-input',  // Human input step - waits for user interaction via Control Channel
     'wait',         // Alias for human-input (backward compatibility)
   ]),
-
-  /* optional fields (vary by step type) */
+  
+  /* Optional fields - backend sends these as optional (can be undefined, null, or value) */
+  description: z.string().nullable().optional(),
+  output: z.unknown().nullable().optional(),
+  timestamp: z.number().int().nullable().optional(),
+  tabId: z.number().int().nullable().optional(),
   url: z.string().nullable().optional(),
   cssSelector: z.string().nullable().optional(),
   xpath: z.string().nullable().optional(),
@@ -46,6 +54,7 @@ export const stepSchema = z.object({
   task: z.string().nullable().optional(),
   content: z.string().nullable().optional(),
   timeoutMs: z.number().int().nullable().optional(),
+  key: z.string().nullable().optional(), // For key_press steps (e.g., 'Control+C', 'Enter')
 });
 
 /* ── Execution Statistics ──────────────────────────────────────────── */

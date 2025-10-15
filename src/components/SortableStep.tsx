@@ -128,6 +128,18 @@ export function SortableStep({
         >
           <div className="space-y-2">
             {/* Show commonly edited fields explicitly when present */}
+            {/* key_press requires 'key' field */}
+            {step.type === 'key_press' && (
+              <div>
+                <Label className={`capitalize ${theme === 'dark' ? 'text-white' : ''}`}>key</Label>
+                <Input
+                  placeholder="e.g., Control+C, Enter, Tab"
+                  value={(step as any).key ?? ''}
+                  onChange={(e) => onUpdate(index, 'key' as keyof Step, e.target.value)}
+                  disabled={disabled}
+                />
+              </div>
+            )}
             {/* clipboard_paste uses 'content' instead of 'output' */}
             {step.type === 'clipboard_paste' && (
               <div>
@@ -192,6 +204,7 @@ export function SortableStep({
                   'content',
                   'cssSelector',
                   'timeoutMs',
+                  'key', // Exclude 'key' since it's handled explicitly above for key_press steps
                 ].includes(key)
               ) return null;
 

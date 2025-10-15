@@ -70,20 +70,14 @@ export function WorkflowEditor() {
 
   useEffect(() => {
     if (currentWorkflowData) {
-      console.log('🔍 [WorkflowEditor] currentWorkflowData:', currentWorkflowData);
-      console.log('🔍 [WorkflowEditor] currentWorkflowData.name:', currentWorkflowData.name);
-      console.log('🔍 [WorkflowEditor] currentWorkflowData.id:', currentWorkflowData.id);
-      console.log('🔍 [WorkflowEditor] currentWorkflowData keys:', Object.keys(currentWorkflowData));
-      
       const safeWorkflow = workflowSchema.safeParse(currentWorkflowData);
       if (safeWorkflow.success) {
-        console.log('🔍 [WorkflowEditor] safeWorkflow.data.name:', safeWorkflow.data.name);
         setWorkflow(safeWorkflow.data);
         setOldWorkflow(safeWorkflow.data);
         setEditorStatus('saved');
       } else {
-        console.error('Invalid workflow data', safeWorkflow.error);
-        console.error('🔍 [WorkflowEditor] Failed to parse workflow:', currentWorkflowData);
+        console.error('[WorkflowEditor] Validation failed:', safeWorkflow.error);
+        console.error('[WorkflowEditor] Failed to parse workflow:', currentWorkflowData);
       }
     }
   }, [currentWorkflowData, setEditorStatus]);
@@ -107,7 +101,6 @@ export function WorkflowEditor() {
     const updatedStep = { ...newSteps[index], [key]: value } as Step;
     newSteps[index] = updatedStep;
     setWorkflow({ ...workflow, steps: newSteps });
-    console.log(`Step at index ${index} updated:`, updatedStep);
   };
 
   const addStep = () => {
@@ -152,12 +145,6 @@ export function WorkflowEditor() {
   const saveChanges = async () => {
     if (!workflow || !oldWorkflow) return;
 
-    console.log('🔍 [WorkflowEditor] saveChanges called');
-    console.log('🔍 [WorkflowEditor] oldWorkflow:', oldWorkflow);
-    console.log('🔍 [WorkflowEditor] oldWorkflow.name:', oldWorkflow.name);
-    console.log('🔍 [WorkflowEditor] workflow:', workflow);
-    console.log('🔍 [WorkflowEditor] workflow.name:', workflow.name);
-
     // Check permissions using simplified auth utilities
     if (!canEdit) {
       const message = !hasSessionToken 
@@ -188,15 +175,13 @@ export function WorkflowEditor() {
     try {
       const newWorkflow = validation.data;
       
-      // QUICK FIX: Get workflow ID from oldWorkflow or currentWorkflowData
+      // Get workflow ID from oldWorkflow or currentWorkflowData
       const workflowId = oldWorkflow.id || currentWorkflowData?.id;
       if (!workflowId) {
         throw new Error('Workflow ID not available. Cannot save changes to this workflow.');
       }
 
-      console.log('🔍 [WorkflowEditor] Using workflow ID for save:', workflowId);
-
-      // QUICK FIX: Single full workflow update instead of individual step operations
+      // Single full workflow update instead of individual step operations
       const updateResponse = await workflowService.updateWorkflow(
         workflowId, 
         newWorkflow, 
