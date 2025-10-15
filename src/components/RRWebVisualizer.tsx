@@ -13,17 +13,26 @@ import {
 
 import { WorkflowVisualizer } from './WorkflowVisualizer';
 import { FrontendScreensaver } from './FrontendScreensaver';
+import { ControlOverlay } from './ControlOverlay';
+import type { ControlMessage } from '@/types/control-channel';
 
 interface RRWebVisualizerProps {
   sessionId?: string;
   onClose?: () => void;
   onCompleted?: () => void;
+  // Control channel props
+  controlEnabled?: boolean;
+  isControlConnected?: boolean; // Passed from parent (VisualPanel)
+  onControlMessage?: (message: ControlMessage) => void;
 }
 
 const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({ 
   sessionId: propSessionId, 
   onClose,
-  onCompleted
+  onCompleted,
+  controlEnabled = false,
+  isControlConnected = false,
+  onControlMessage
 }: RRWebVisualizerProps) {
   const { sessionId: urlSessionId } = useParams<{ sessionId: string }>();
   const sessionId = propSessionId || urlSessionId;
@@ -81,6 +90,27 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
       flushLogsTimer.current = setTimeout(flushLogs, 2000);
     }
   }, [flushLogs]);
+  
+  // Handle control messages from ControlOverlay - STABLE callback to prevent re-renders
+  const handleControlMessageRef = useRef(onControlMessage);
+  useEffect(() => {
+    handleControlMessageRef.current = onControlMessage;
+  }, [onControlMessage]);
+  
+  const handleControlMessage = useCallback((message: ControlMessage) => {
+    // Forward to parent (VisualPanel) which has the actual WebSocket hook
+    const currentCallback = handleControlMessageRef.current;
+    if (currentCallback) {
+      currentCallback(message);
+      
+      // Only log errors (remove verbose success logs)
+      if (!isControlConnected && message.type === 'keyboard' && message.action === 'down' && message.key && message.key.length === 1) {
+        console.warn('⚠️ [ControlChannel] WebSocket disconnected - message not sent');
+      }
+    } else {
+      console.error('❌ [RRWebVisualizer] onControlMessage callback not provided!');
+    }
+  }, [isControlConnected]); // Only depend on isControlConnected, not onControlMessage
 
   // CSP configuration for enhanced security (Option 3)
   const configureiFrameCSP = useCallback((iframe: HTMLIFrameElement) => {
@@ -384,6 +414,16 @@ const RRWebVisualizerComponent = React.memo(function RRWebVisualizer({
                   display: hasRealContent ? 'block' : 'none'
                 }}
               />
+
+              {/* 🎮 CONTROL OVERLAY: Forward user input to remote browser */}
+              {/* Render based on controlEnabled ONLY - WebSocket connection is not required for input capture */}
+              {controlEnabled && (
+                <ControlOverlay
+                  iframeRef={iframeRef}
+                  onControlMessage={handleControlMessage}
+                  isActive={controlEnabled}
+                />
+              )}
             </div>
             
             {/* Overlay states on top of iframe */}

@@ -24,6 +24,14 @@ export const WS_BASE_URL = IS_PRODUCTION ?
   `ws://${window.location.host}`;
 
 /**
+ * Direct WebSocket URL (bypasses Vite proxy) - for Control Channel
+ * Use this for WebSocket endpoints that need direct backend connection
+ */
+export const WS_DIRECT_URL = IS_PRODUCTION ?
+  `wss://api.rebrowse.me` :
+  `ws://localhost:8000`;
+
+/**
  * API Endpoints Configuration
  */
 export const API_ENDPOINTS = {
@@ -34,6 +42,10 @@ export const API_ENDPOINTS = {
   VISUAL_STATUS: (sessionId: string) => `${API_BASE_URL}/workflows/visual/${sessionId}/status`,
   VISUAL_VIEWER: (sessionId: string) => `${API_BASE_URL}/workflows/visual/${sessionId}/viewer`,
   VISUAL_STREAM_WS: (sessionId: string) => `${WS_BASE_URL}/workflows/visual/${sessionId}/stream`,
+  
+  // Control channel endpoint (for forwarding user input to remote browser)
+  // Use direct connection to bypass Vite proxy (WebSocket proxying can be unreliable)
+  CONTROL_CHANNEL_WS: (sessionId: string) => `${WS_DIRECT_URL}/workflows/visual/${sessionId}/control`,
 
   // Live logs WebSocket endpoint
   LOGS_STREAM_WS: (executionId: string) => `${WS_BASE_URL}/ws/logs/${executionId}`,

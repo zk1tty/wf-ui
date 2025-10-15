@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { RRWebVisualizer } from './RRWebVisualizer';
+import { ControlChannelToggle } from './ControlChannelToggle';
+import { useControlChannelWebSocket } from '@/hooks/useControlChannelWebSocket';
 import { Eye, GripVertical } from 'lucide-react';
 
 type VisualPanelProps = {
@@ -17,6 +19,47 @@ export const VisualPanel: React.FC<VisualPanelProps> = ({
   onResizeMouseDown,
   onResizeDoubleClick,
 }) => {
+  // Control channel state - SINGLE source of truth
+  const [controlEnabled, setControlEnabled] = useState(false);
+  
+  const {
+    isConnected,
+    isSessionActive,
+    sessionState,
+    sendMessage,
+    startSession,
+    stopSession,
+  } = useControlChannelWebSocket(sessionId, {
+    onSessionExpired: () => {
+      console.log('⏱️ [VisualPanel] Control session expired');
+      setControlEnabled(false);
+    },
+    onError: (error) => {
+      console.error('❌ [VisualPanel] Control channel error:', error);
+    },
+  });
+
+  const handleStartControl = () => {
+    setControlEnabled(true);
+    startSession();
+  };
+
+  const handleStopControl = () => {
+    setControlEnabled(false);
+    stopSession();
+  };
+  
+  // Stabilize callback to prevent infinite re-renders in ControlOverlay
+  const sendMessageRef = useRef(sendMessage);
+  useEffect(() => {
+    sendMessageRef.current = sendMessage;
+  }, [sendMessage]);
+  
+  const handleControlMessage = useCallback((message: any) => {
+    // Send message using the hook from VisualPanel
+    sendMessageRef.current(message);
+  }, []); // No dependencies to keep it stable
+
   return (
     <>
       {/* Left side Visual panel - dynamic width */}
@@ -30,7 +73,32 @@ export const VisualPanel: React.FC<VisualPanelProps> = ({
           {/* If no session, show standby placeholder */}
           {sessionId ? (
             <div className="h-full min-h-0 flex flex-col">
-              <RRWebVisualizer sessionId={sessionId || undefined} />
+              {/* Control Panel Header */}
+              <div className="border-b border-gray-200 px-3 py-2 flex items-center justify-between bg-gray-50 shrink-0">
+                <div className="flex items-center space-x-2">
+                  <Eye className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">Visual Stream</span>
+                </div>
+                
+                {/* Control Channel Toggle */}
+                <ControlChannelToggle
+                  isActive={isSessionActive}
+                  sessionState={sessionState}
+                  onStart={handleStartControl}
+                  onStop={handleStopControl}
+                  disabled={!sessionId}
+                />
+              </div>
+
+              {/* RRWebVisualizer with control enabled */}
+              <div className="flex-1 min-h-0">
+                <RRWebVisualizer 
+                  sessionId={sessionId || undefined}
+                  controlEnabled={controlEnabled}
+                  isControlConnected={isConnected}
+                  onControlMessage={handleControlMessage}
+                />
+              </div>
             </div>
           ) : (
             <div className="h-full flex items-center justify-center bg-gray-900 text-gray-300">
