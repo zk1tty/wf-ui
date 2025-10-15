@@ -99,10 +99,10 @@ export function calculateViewportTransform(iframe: HTMLIFrameElement | null): Vi
     // 🔧 MANUAL OFFSET CORRECTION: For cases where automatic detection doesn't work
     // You can manually adjust these values based on your remote environment
     const MANUAL_OFFSET_X: number = 0; // Add/subtract pixels to fix X-axis offset
-    const MANUAL_OFFSET_Y: number = 230; // Add/subtract pixels to fix Y-axis offset (increased to move remote mouse UP)
+    const MANUAL_OFFSET_Y: number = 220; // Add/subtract pixels to fix Y-axis offset (increased to move remote mouse UP)
     
     if (MANUAL_OFFSET_X !== 0 || MANUAL_OFFSET_Y !== 0) {
-      console.log('🔧 [CoordinateTransform] Applying manual offset correction:', { x: MANUAL_OFFSET_X, y: MANUAL_OFFSET_Y });
+      console.debug('🔧 [CoordinateTransform] Applying manual offset correction:', { x: MANUAL_OFFSET_X, y: MANUAL_OFFSET_Y });
       offsetX += MANUAL_OFFSET_X;
       offsetY += MANUAL_OFFSET_Y;
     }
