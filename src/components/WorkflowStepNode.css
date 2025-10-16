@@ -1,0 +1,11 @@
+.react-flow__node:hover .workflow-hover-overlay,
+.react-flow__node.selectable:hover .workflow-hover-overlay,
+.react-flow__node.draggable:hover .workflow-hover-overlay {
+  opacity: 1;
+}
+
+/* ensure overlay stays below toolbar and handles */
+.workflow-hover-overlay {
+  z-index: 0;
+}
+

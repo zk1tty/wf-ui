@@ -220,7 +220,7 @@ export function TopToolbar() {
       return;
     }
     if (displayMode === 'canvas') {
-      console.log('Editing workflow:', currentWorkflowData?.name);
+      console.log('Switching to editor mode:', currentWorkflowData?.name);
       setDisplayMode('editor');
     } else {
       console.log('Switching to canvas:', currentWorkflowData?.name);
@@ -362,11 +362,11 @@ export function TopToolbar() {
               {displayMode === 'editor' 
                 ? <>
                     <Blocks className="w-5 h-5" />
-                    Canvas
+                    Canvas View
                   </>
                 : <>
                     <Edit3 className="w-5 h-5" />
-                    Edit
+                    List View
                   </>}
             </Button>
 

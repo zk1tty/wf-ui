@@ -1,8 +1,6 @@
 import React, { useCallback, useMemo, useRef } from 'react';
 import {
   ReactFlow,
-  Background,
-  BackgroundVariant,
   Controls,
   MiniMap,
   useNodesState,
@@ -16,20 +14,27 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { WorkflowStepNode } from './WorkflowStepNode';
+import { DotsBackground } from './DotsBackground';
 import { useAppContext } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAppContext as useAppContextRaw } from '@/contexts/AppContext';
 import { getOrderedSteps } from '@/services/workflowSelectors';
+import { z } from 'zod';
+import { stepSchema } from '@/types/workflow-layout.types';
 
-const nodeTypes = {
-  workflowStep: WorkflowStepNode,
-};
+// Create a custom node type that passes the click handler, save handler, and delete handler
+const createNodeTypes = (onStepClick: (stepIndex: number) => void, onSaveStep: (stepIndex: number, updatedStep: any) => void, onDeleteStep: (stepIndex: number) => void) => ({
+  workflowStep: (props: any) => <WorkflowStepNode {...props} onStepClick={onStepClick} onSaveStep={onSaveStep} onDeleteStep={onDeleteStep} />,
+});
+
+type Step = z.infer<typeof stepSchema>;
 
 export function WorkflowCanvas() {
-  const { currentWorkflowData } = useAppContext();
+  const { currentWorkflowData, updateWorkflowUI } = useAppContext();
   const { currentRunId } = useAppContextRaw();
   const { theme } = useTheme();
   const reactFlowInstanceRef = useRef<ReactFlowInstance | null>(null);
+  
 
   const initialNodes: Node[] = useMemo(() => {
     if (!currentWorkflowData) {
@@ -81,6 +86,56 @@ export function WorkflowCanvas() {
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
+
+
+
+
+  // Handle step click to open setting card
+  const handleStepClick = useCallback((_stepIndex: number) => {
+    // This is now handled by the WorkflowStepNode itself
+  }, []);
+
+  // Handle step setting card close
+  const handleCloseStepSetting = useCallback(() => {
+    // This is now handled by the WorkflowStepNode itself
+  }, []);
+
+  // Handle step save
+  const handleSaveStep = useCallback((stepIndex: number, updatedStep: Step) => {
+    if (!currentWorkflowData) return;
+    
+    const updatedSteps = [...currentWorkflowData.steps];
+    updatedSteps[stepIndex] = updatedStep;
+    
+    const updatedWorkflow = {
+      ...currentWorkflowData,
+      steps: updatedSteps
+    };
+    
+    // Update the workflow in the context
+    updateWorkflowUI(currentWorkflowData, updatedWorkflow);
+    
+    // Close the setting card
+    handleCloseStepSetting();
+  }, [currentWorkflowData, updateWorkflowUI, handleCloseStepSetting]);
+
+  // Handle step delete
+  const handleDeleteStep = useCallback((stepIndex: number) => {
+    if (!currentWorkflowData) return;
+    
+    const updatedSteps = currentWorkflowData.steps.filter((_, index) => index !== stepIndex);
+    
+    const updatedWorkflow = {
+      ...currentWorkflowData,
+      steps: updatedSteps
+    };
+    
+    // Update the workflow in the context
+    updateWorkflowUI(currentWorkflowData, updatedWorkflow);
+    
+    // Close the setting card
+    handleCloseStepSetting();
+  }, [currentWorkflowData, updateWorkflowUI, handleCloseStepSetting]);
 
   // Update nodes when currentWorkflowData changes
   React.useEffect(() => {
@@ -145,37 +200,35 @@ export function WorkflowCanvas() {
     }
   }
 
-  // Theme-based styling
+  // Theme-based styling matching step setting card
   const canvasStyle = {
-    backgroundColor: theme === 'dark' ? '#000000' : '#f9fafb'
+    backgroundColor: theme === 'dark' ? '#0f1216' : '#f9fafb'
   };
   
-  const backgroundClass = theme === 'dark' ? 'bg-black' : 'bg-gray-50';
-  const backgroundDotsColor = theme === 'dark' ? '#ffffff' : '#000000';
   const controlsClass = theme === 'dark' 
-    ? 'bg-gray-800 border border-gray-600 rounded-lg shadow-sm text-white' 
-    : 'bg-white border border-gray-200 rounded-lg shadow-sm';
+    ? 'workflow-controls bg-gray-800/80 backdrop-blur-sm border border-gray-600/50 rounded-lg shadow-lg text-white' 
+    : 'workflow-controls bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg shadow-sm';
   const minimapClass = theme === 'dark'
-    ? 'bg-gray-800 border border-gray-600 rounded-lg shadow-sm'
-    : 'bg-white border border-gray-200 rounded-lg shadow-sm';
+    ? 'workflow-minimap bg-gray-800/80 backdrop-blur-sm border border-gray-600/50 rounded-lg shadow-lg'
+    : 'workflow-minimap bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg shadow-sm';
 
   return (
-    <div className={`w-full h-full ${backgroundClass}`}>
+    <div className="w-full h-full relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        nodeTypes={nodeTypes}
+        nodeTypes={createNodeTypes(handleStepClick, handleSaveStep, handleDeleteStep)}
         onInit={(instance) => {
           reactFlowInstanceRef.current = instance;
         }}
         fitView
         style={canvasStyle}
-        defaultViewport={{ x: 0, y: 0, zoom: 0 }}
+        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
       >
-        <Background color={backgroundDotsColor} variant={BackgroundVariant.Dots} gap={20} />
+        <DotsBackground theme={theme} />
         <Controls className={controlsClass} />
         <MiniMap
           className={minimapClass}
@@ -193,6 +246,7 @@ export function WorkflowCanvas() {
           }}
         />
       </ReactFlow>
+
     </div>
   );
 }

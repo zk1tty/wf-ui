@@ -128,37 +128,113 @@
   }
 }
 
-/* Dark mode specific styles for ReactFlow */
-.dark .react-flow__edge-path {
-  stroke: #9ca3af !important;
+/* ===== Workflow Canvas - Matching Step Setting Card ===== */
+
+/* Theme tokens for consistency with step card */
+:root {
+  --workflow-panel: #ffffff;                         /* card bg */
+  --workflow-panel-hairline: rgba(0, 0, 0, .08);
+  --workflow-panel-text: rgba(0, 0, 0, .92);
+  --workflow-canvas-bg: #f9fafb;
+  --workflow-dot-rgb: 0, 0, 0;
+  --workflow-edge-stroke: rgba(0, 0, 0, .2);
+  --workflow-arrowhead: rgba(0, 0, 0, .2);
 }
 
-.dark .react-flow__edge-textwrapper {
-  color: #f3f4f6 !important;
+.dark {
+  --workflow-panel: #151922;                         /* card bg matching StepSettingCard */
+  --workflow-panel-hairline: rgba(255, 255, 255, .08);
+  --workflow-panel-text: rgba(255, 255, 255, .92);
+  --workflow-canvas-bg: #0f1216;
+  --workflow-dot-rgb: 255, 255, 255;
+  --workflow-edge-stroke: rgba(255, 255, 255, .14);
+  --workflow-arrowhead: rgba(255, 255, 255, .14);
 }
 
-.dark .react-flow__node {
-  color: #f3f4f6 !important;
+/* Ensure built-in RF dots don't override our custom fill */
+.react-flow__background-pattern.dots {
+  fill: transparent !important;
 }
 
-.dark .react-flow__controls {
-  background: #1f2937 !important;
-  border: 1px solid #4b5563 !important;
+/* ReactFlow nodes with card styling */
+.react-flow__node {
+  background: var(--workflow-panel);
+  border: 1px solid var(--workflow-panel-hairline);
+  border-radius: 14px;
+  color: var(--workflow-panel-text);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .35),
+              0 2px 4px rgba(0, 0, 0, .45);
+  transition: all 0.2s ease;
 }
 
-.dark .react-flow__controls button {
-  background: #374151 !important;
-  color: #f3f4f6 !important;
-  border: 1px solid #4b5563 !important;
+/* Light mode node shadows */
+body:not(.dark) .react-flow__node {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .15),
+              0 1px 2px rgba(0, 0, 0, .1);
 }
 
-.dark .react-flow__controls button:hover {
-  background: #4b5563 !important;
+body:not(.dark) .react-flow__node:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .2),
+              0 2px 4px rgba(0, 0, 0, .15);
 }
 
-.dark .react-flow__minimap {
-  background: #1f2937 !important;
-  border: 1px solid #4b5563 !important;
+/* Selected/Active node with subtle purple (matching step badge) */
+.react-flow__node.selected {
+  border-color: rgba(122, 130, 255, .35);
+  box-shadow: 0 0 0 1px rgba(122, 130, 255, .35),
+              0 10px 28px rgba(122, 130, 255, .10);
+}
+
+/* Edges - subtle and refined */
+.react-flow__edge-path {
+  stroke: var(--workflow-edge-stroke) !important;
+  stroke-width: 2px;
+}
+
+.react-flow__arrowhead {
+  fill: var(--workflow-arrowhead);
+}
+
+/* Controls with glass morphism */
+.workflow-controls button {
+  transition: all 0.15s ease-in-out;
+}
+
+.dark .workflow-controls button {
+  background: rgba(55, 65, 81, 0.6) !important;
+  border: 1px solid rgba(75, 85, 99, 0.4) !important;
+}
+
+.dark .workflow-controls button:hover {
+  background: rgba(75, 85, 99, 0.8) !important;
+  border-color: rgba(122, 130, 255, .3) !important;
+}
+
+/* Minimap styling */
+.dark .workflow-minimap .react-flow__minimap-mask {
+  fill: rgba(15, 18, 22, 0.7);
+}
+
+body:not(.dark) .workflow-minimap .react-flow__minimap-mask {
+  fill: rgba(249, 250, 251, 0.7);
+}
+
+/* Step Setting Card consistency with nodes */
+.step-setting-card {
+  background: var(--workflow-panel);
+  border: 1px solid var(--workflow-panel-hairline);
+  border-radius: 14px;
+  color: var(--workflow-panel-text);
+}
+
+.dark .step-setting-card {
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .35),
+              0 2px 4px rgba(0, 0, 0, .45);
+}
+
+body:not(.dark) .step-setting-card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .15),
+              0 1px 2px rgba(0, 0, 0, .1);
 }
 
 /* Neon glow effects for dark mode */

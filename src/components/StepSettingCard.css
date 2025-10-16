@@ -1,0 +1,98 @@
+/* StepSettingCard Drag Handle Styles */
+.drag-handle {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.drag-handle:hover {
+  background-color: rgba(55, 65, 81, 0.5); /* gray-700 with opacity */
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+  background-color: rgba(75, 85, 99, 0.7); /* darker on active */
+}
+
+/* React Flow Panel positioning for StepSetting card */
+.react-flow__panel {
+  pointer-events: auto;
+}
+
+/* Ensure NodeToolbar content scales with zoom */
+.react-flow__node-toolbar {
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* Make StepSettingCard responsive to zoom level */
+.react-flow__node-toolbar .step-setting-card {
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* Ensure the card is draggable within the panel and has proper z-index layering */
+.step-setting-card {
+  pointer-events: auto;
+  z-index: 0; /* Lowest z-index to stay below all panels and labels */
+  position: relative;
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* Dragging state styles */
+.step-setting-card.dragging {
+  transform: rotate(1deg);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Smooth transitions */
+.step-setting-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Resize handle styles - simplified */
+.step-setting-card {
+  resize: both;
+  overflow: auto;
+  position: relative; /* required */
+}
+
+.step-setting-card:after {
+  content: "";
+  resize: both;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+  position: absolute;
+  z-index: 9;
+  width: 20px;
+  height: 20px;
+}
+
+/* Cursor states */
+.step-setting-card.resizing {
+  cursor: se-resize;
+}
+
+/* Resize UI element */
+.resizeUI {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: inherit;
+  padding: 0px 3px;
+  pointer-events: none;
+  cursor: se-resize;
+}
+
+/* Compact mode styles - disable resize */
+.step-setting-card-compact {
+  resize: none;
+}
+
+.step-setting-card-compact:after {
+  display: none;
+}

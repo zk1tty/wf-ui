@@ -1,5 +1,5 @@
-import { memo } from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { memo, useState } from 'react';
+import { Handle, Position, NodeToolbar } from '@xyflow/react';
 import {
   MousePointerClick,
   Type,
@@ -11,10 +11,13 @@ import {
   ClipboardPaste,
   ClipboardCopy,
   Hand,
+  Edit3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/contexts/ThemeContext';
 import { CheckCircle2, XCircle, Bot, LoaderCircle } from 'lucide-react';
+import { StepSettingCard } from './StepSettingCard';
+import './WorkflowStepNode.css';
 
 interface WorkflowStepNodeData {
   description: string;
@@ -41,6 +44,9 @@ interface WorkflowStepNodeData {
 interface WorkflowStepNodeProps {
   data: WorkflowStepNodeData;
   selected?: boolean;
+  onStepClick?: (stepIndex: number) => void;
+  onSaveStep?: (stepIndex: number, updatedStep: any) => void;
+  onDeleteStep?: (stepIndex: number) => void;
 }
 
 const actionIcons = {
@@ -72,28 +78,67 @@ const actionColors = {
 };
 
 export const WorkflowStepNode = memo(
-  ({ data, selected }: WorkflowStepNodeProps) => {
+  ({ data, selected, onStepClick, onSaveStep, onDeleteStep }: WorkflowStepNodeProps) => {
     const { theme } = useTheme();
+    const [showToolbar, setShowToolbar] = useState(false);
     const Icon = actionIcons[data.action] || Info; // Fallback to Info icon if action not found
     const colorClass = actionColors[data.action] || 'bg-gray-500'; // Fallback to gray if color not found
 
+    const handleStepClick = (event: React.MouseEvent) => {
+      event.stopPropagation(); // Prevent ReactFlow from handling the click
+      setShowToolbar(!showToolbar);
+      if (onStepClick && data.stepNumber > 0) {
+        onStepClick(data.stepNumber - 1); // Convert to 0-based index
+      }
+    };
+
+    const handleSaveStep = (stepIndex: number, updatedStep: any) => {
+      if (onSaveStep) {
+        onSaveStep(stepIndex, updatedStep);
+      }
+      setShowToolbar(false);
+    };
+
+    const handleDeleteStep = (stepIndex: number) => {
+      if (onDeleteStep) {
+        onDeleteStep(stepIndex);
+      }
+      setShowToolbar(false);
+    };
+
     return (
-      <div
-        className={cn(
-          'relative rounded-lg border-2 shadow-sm p-4 w-[380px] h-[100px] transition-all',
-          theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white text-gray-900',
-          selected 
-            ? 'border-purple-500 shadow-md' 
-            : theme === 'dark' 
-              ? 'border-gray-600' 
-              : 'border-gray-200',
-          'hover:shadow-md',
-          data.status === 'running' && 'border-red-400 animate-pulse',
-          data.status === 'AI-fallback' && 'border-yellow-400 animate-pulse',
-          data.status === 'success' && 'border-green-500',
-          data.status === 'fail' && 'border-red-600'
-        )}
-      >
+      <>
+        <NodeToolbar isVisible={showToolbar} position={Position.Right} align="start">
+          <StepSettingCard
+            step={{
+              ...data,
+              type: data.action, // Map action to type for StepSettingCard
+            }}
+            stepIndex={data.stepNumber - 1}
+            onSave={handleSaveStep}
+            onDelete={onDeleteStep ? handleDeleteStep : undefined}
+            onClose={() => setShowToolbar(false)}
+            compact={false}
+          />
+        </NodeToolbar>
+        
+        <div
+          className={cn(
+            'relative rounded-lg border-2 shadow-sm p-4 w-[380px] h-[100px] transition-all',
+            theme === 'dark' ? 'bg-gray-800 text-white' : 'bg-white text-gray-900',
+            selected 
+              ? 'border-purple-500 shadow-md' 
+              : theme === 'dark' 
+                ? 'border-gray-600' 
+                : 'border-gray-200',
+            'hover:shadow-md cursor-pointer',
+            data.status === 'running' && 'border-red-400 animate-pulse',
+            data.status === 'AI-fallback' && 'border-yellow-400 animate-pulse',
+            data.status === 'success' && 'border-green-500',
+            data.status === 'fail' && 'border-red-600'
+          )}
+          onClick={handleStepClick}
+        >
         {data.stepNumber > 1 && (
           <Handle
             type="target"
@@ -203,7 +248,15 @@ export const WorkflowStepNode = memo(
             )}
           />
         )}
-      </div>
+
+        {/* Hover overlay with edit icon */}
+        <div className="workflow-hover-overlay absolute inset-0 bg-white/10 rounded-lg flex items-center justify-center opacity-0 transition-opacity duration-200 pointer-events-none">
+          <div className="bg-white bg-opacity-90 rounded-full p-3 shadow-lg">
+            <Edit3 className="w-6 h-6 text-gray-700" />
+          </div>
+        </div>
+        </div>
+      </>
     );
   }
 );
