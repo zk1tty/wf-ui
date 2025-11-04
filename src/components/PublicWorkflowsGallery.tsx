@@ -2,12 +2,13 @@ import React from 'react';
 import { usePublicWorkflows } from '@/hooks/usePublicWorkflows';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Globe, Clock, User, Loader2, Footprints, Brain, BarChart3, Heart, Eye, Play } from 'lucide-react';
+import { Globe, Clock, User, Loader2, Footprints, Brain, BarChart3, Heart, Eye, Play, Zap, Database, Mail, ShoppingCart, FileText, Code } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/contexts/AppContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { checkWorkflowOwnership, hasValidSessionToken } from '@/utils/authUtils';
 import EnhancedWorkflowDashboard from '@/components/EnhancedWorkflowDashboard';
+import { API_BASE_URL } from '@/lib/constants';
 import '@/styles/brainAnimation.css';
 
 export const PublicWorkflowsGallery = () => {
@@ -15,47 +16,80 @@ export const PublicWorkflowsGallery = () => {
   const { currentUserSessionToken, workflows: userWorkflows, activeExecutions } = useAppContext();
   const { theme } = useTheme();
   const [ownershipStatus, setOwnershipStatus] = React.useState<{[key: string]: boolean}>({});
+  const [gifLoadErrors, setGifLoadErrors] = React.useState<{[key: string]: boolean}>({});
+  const [faviconLoadErrors, setFaviconLoadErrors] = React.useState<{[key: string]: Set<string>}>({});
 
   const hasSessionToken = hasValidSessionToken(currentUserSessionToken);
 
-  // Helper function to get thumbnail image
-  const getThumbnailImage = (workflow: any) => {
-    // You can customize this logic based on your workflow data structure
-    // For now, using a placeholder or workflow-specific image
-    if (workflow.thumbnail_url) {
-      return workflow.thumbnail_url;
-    }
+  // Helper function to get ambient gradient background (softer colors to emphasize favicons)
+  const getGradient = (workflow: any) => {
+    const workflowName = workflow.name || 'workflow';
+    const gradients = [
+      'bg-gradient-to-br from-blue-200 to-purple-200',
+      'bg-gradient-to-br from-green-200 to-cyan-200',
+      'bg-gradient-to-br from-pink-200 to-rose-200',
+      'bg-gradient-to-br from-orange-200 to-red-200',
+      'bg-gradient-to-br from-indigo-200 to-blue-200',
+      'bg-gradient-to-br from-yellow-200 to-orange-200',
+      'bg-gradient-to-br from-purple-200 to-pink-200',
+      'bg-gradient-to-br from-teal-200 to-blue-200',
+      'bg-gradient-to-br from-red-200 to-pink-200',
+      'bg-gradient-to-br from-cyan-200 to-indigo-200',
+    ];
     
-    // Return null to use CSS placeholder instead of external service
-    return null;
+    const gradientIndex = workflowName.length % gradients.length;
+    return gradients[gradientIndex] || gradients[0];
   };
 
-  // Helper function to get placeholder color, text, and emoji
-  const getPlaceholderStyle = (workflow: any) => {
-    const workflowName = workflow.name || 'workflow';
-    const colors = [
-      { bg: 'bg-blue-500', text: 'text-white' },
-      { bg: 'bg-purple-500', text: 'text-white' },
-      { bg: 'bg-green-500', text: 'text-white' },
-      { bg: 'bg-red-500', text: 'text-white' },
-      { bg: 'bg-yellow-500', text: 'text-black' },
-      { bg: 'bg-indigo-500', text: 'text-white' }
-    ];
+  // Helper function to extract favicon URLs from workflow (all navigation steps)
+  const getFaviconUrls = (workflow: any) => {
+    // Find all navigation steps
+    const navSteps = workflow.steps?.filter((step: any) => step.type === 'navigation') || [];
+    if (navSteps.length === 0) return [];
     
-    // Random emojis for different workflow types
-    const emojis = [
-      '🤖', '⚡', '🔧', '🚀', '💡', '🎯', '📊', '🎨', '📝',
-      '🔍', '⚙️', '🌟', '💻', '📱', '🌐', '🔗', '📈', '🎪', '🎭',
-      '🧠', '💎', '🔥', '❄️', '🌈', '🎵', '🎮', '📚', '🏆', '🎉'
-    ];
+    const faviconUrls: string[] = [];
+    const seenDomains = new Set<string>();
     
-    const colorIndex = workflowName.length % colors.length;
-    const emojiIndex = (workflowName.length + workflowName.charCodeAt(0)) % emojis.length;
+    for (const navStep of navSteps) {
+      if (!navStep?.url) continue;
+      
+      try {
+        // Extract the domain to avoid duplicates
+        const urlObj = new URL(navStep.url);
+        const domain = urlObj.hostname;
+        
+        // Skip if we've already added this domain
+        if (seenDomains.has(domain)) continue;
+        seenDomains.add(domain);
+        
+        // Use Google's favicon service
+        const faviconUrl = `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(navStep.url)}&size=128`;
+        faviconUrls.push(faviconUrl);
+      } catch (error) {
+        console.error('Failed to extract favicon URL:', error);
+      }
+    }
     
-    return {
-      ...colors[colorIndex] || colors[0],
-      emoji: emojis[emojiIndex] || '🤖'
-    };
+    return faviconUrls;
+  };
+
+  // Helper function to get appropriate Lucide icon based on workflow
+  const getLucideIcon = (workflow: any) => {
+    const name = (workflow.name || '').toLowerCase();
+    const description = (workflow.description || '').toLowerCase();
+    const text = `${name} ${description}`;
+    
+    // Icon mapping based on keywords
+    if (text.includes('mail') || text.includes('email')) return Mail;
+    if (text.includes('shop') || text.includes('cart') || text.includes('ecommerce')) return ShoppingCart;
+    if (text.includes('data') || text.includes('database')) return Database;
+    if (text.includes('code') || text.includes('dev') || text.includes('github')) return Code;
+    if (text.includes('document') || text.includes('file') || text.includes('pdf')) return FileText;
+    if (text.includes('web') || text.includes('browse') || text.includes('site')) return Globe;
+    if (text.includes('auto') || text.includes('quick') || text.includes('fast')) return Zap;
+    
+    // Default fallback
+    return Brain;
   };
 
   // Helper function to get workflow stats
@@ -109,7 +143,7 @@ export const PublicWorkflowsGallery = () => {
         <h1 className={`text-2xl font-bold mb-6 ${
           theme === 'dark' ? 'text-white' : 'text-gray-900'
         }`}>
-          Workflow Gallery
+          Appflow Gallery
         </h1>
 
         {/* Loading Spinner and Text */}
@@ -120,7 +154,7 @@ export const PublicWorkflowsGallery = () => {
           <p className={`text-lg ${
             theme === 'dark' ? 'text-cyan-300' : 'text-gray-600'
           }`}>
-            Loading public workflows...
+            Loading public appflows...
           </p>
         </div>
 
@@ -241,8 +275,17 @@ export const PublicWorkflowsGallery = () => {
           {workflows.map((workflow) => {
             const isOwner = workflow.id ? ownershipStatus[workflow.id] : false;
             const stats = getWorkflowStats(workflow);
-            const thumbnailUrl = getThumbnailImage(workflow);
-            const placeholderStyle = getPlaceholderStyle(workflow);
+            const gradient = getGradient(workflow);
+            const gifUrl = workflow.id ? `${API_BASE_URL}/workflows/${workflow.id}/gif` : null;
+            const faviconUrls = getFaviconUrls(workflow);
+            const LucideIcon = getLucideIcon(workflow);
+            
+            // Filter out favicons that have errored
+            const erroredFavicons = faviconLoadErrors[workflow.id] || new Set<string>();
+            const validFaviconUrls = faviconUrls.filter(url => !erroredFavicons.has(url));
+            
+            const shouldShowGif = gifUrl && !gifLoadErrors[workflow.id];
+            const shouldShowFavicons = !shouldShowGif && validFaviconUrls.length > 0;
             
             return (
               <Card key={workflow.id} className={`hover:shadow-lg transition-shadow cursor-pointer overflow-hidden ${
@@ -253,18 +296,51 @@ export const PublicWorkflowsGallery = () => {
                   // Navigate to workflow detail page
                   window.location.href = `/wf/${workflow.id}`;
                 }}>
-                  {thumbnailUrl ? (
+                  {shouldShowGif ? (
                     <img 
-                      src={thumbnailUrl}
-                      alt={workflow.name || 'Workflow thumbnail'}
+                      src={gifUrl}
+                      alt={workflow.name || 'Workflow GIF'}
                       className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      onError={() => {
+                        setGifLoadErrors(prev => ({ ...prev, [workflow.id]: true }));
+                      }}
                     />
                   ) : (
-                    <div className={`w-full h-full flex items-center justify-center transition-transform group-hover:scale-105 ${placeholderStyle?.bg || 'bg-blue-500'}`}>
-                      <div className="text-center px-4">
-                        <div className={`text-6xl mb-4 ${placeholderStyle?.text || 'text-white'}`}>
-                          {placeholderStyle?.emoji || '🌱'}
-                        </div>
+                    <div className={`w-full h-full flex items-center justify-center transition-transform group-hover:scale-105 ${gradient}`}>
+                      <div className="text-center px-4 w-full">
+                        {shouldShowFavicons ? (
+                          <div className={`flex items-center justify-center gap-3 flex-wrap ${
+                            validFaviconUrls.length === 1 ? '' : 'max-w-[200px] mx-auto'
+                          }`}>
+                            {validFaviconUrls.map((faviconUrl, index) => (
+                              <img
+                                key={`${workflow.id}-favicon-${index}`}
+                                src={faviconUrl}
+                                alt={`Workflow favicon ${index + 1}`}
+                                className={`drop-shadow-lg ${
+                                  validFaviconUrls.length === 1
+                                    ? 'w-20 h-20'
+                                    : validFaviconUrls.length === 2
+                                    ? 'w-16 h-16'
+                                    : validFaviconUrls.length === 3
+                                    ? 'w-14 h-14'
+                                    : 'w-12 h-12'
+                                }`}
+                                onError={() => {
+                                  setFaviconLoadErrors(prev => {
+                                    const newErrors = { ...prev };
+                                    const errorSet = newErrors[workflow.id] || new Set<string>();
+                                    errorSet.add(faviconUrl);
+                                    newErrors[workflow.id] = errorSet;
+                                    return newErrors;
+                                  });
+                                }}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <LucideIcon className="w-20 h-20 text-gray-600 drop-shadow-lg mx-auto" />
+                        )}
                       </div>
                     </div>
                   )}

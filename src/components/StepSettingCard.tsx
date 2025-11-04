@@ -237,7 +237,7 @@ export function StepSettingCard({
   const relevantAttributes = getRelevantAttributes(editedStep.type);
 
   return (
-    <Card 
+    <Card
       ref={cardRef}
       className={`step-setting-card ${
         compact 
